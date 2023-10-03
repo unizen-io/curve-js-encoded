@@ -251,3 +251,4 @@ export interface IDaoProposal extends IDaoProposalListItem{
     script: string,
     votes: IDaoProposalVote[],
 }
+export interface ICalldata { route: IRoute, actualQuote: string, minReturnAmount: string, targetDex: string, calldata: string }

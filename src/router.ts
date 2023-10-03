@@ -3,7 +3,7 @@ import memoize from "memoizee";
 import BigNumber from "bignumber.js";
 import { ethers } from "ethers";
 import { curve } from "./curve.js";
-import { IDict, ISwapType, IRoute, IRouteStep, IRouteTvl, IRouteOutputAndCost } from "./interfaces";
+import { IDict, ISwapType, IRoute, IRouteStep, IRouteTvl, IRouteOutputAndCost, ICalldata } from "./interfaces";
 import {
     _getCoinAddresses,
     _getCoinDecimals,
@@ -519,7 +519,7 @@ const _estimateGasForDifferentRoutes = async (routes: IRoute[], inputCoinAddress
         const { _route, _swapParams, _pools } = _getExchangeArgs(route);
 
         if ((_estimatedGasForDifferentRoutesCache[routeKey]?.time || 0) + 3600000 < Date.now()) {
-            gasPromise = contract.exchange.estimateGas(_route, _swapParams, _amount, 0, _pools, { ...curve.constantOptions, value});
+            gasPromise = contract.exchange.estimateGas(_route, _swapParams, _amount, 0, _pools, { ...curve.constantOptions, value });
         } else {
             gasPromise = Promise.resolve(_estimatedGasForDifferentRoutesCache[routeKey].gas);
         }
@@ -754,11 +754,13 @@ export const swapEstimateGas = async (inputCoin: string, outputCoin: string, amo
     return gas
 }
 
-export const swap = async (inputCoin: string, outputCoin: string, amount: number | string, slippage = 0.5): Promise<ethers.ContractTransactionResponse> => {
+export const swap = async (inputCoin: string, outputCoin: string, amount: number | string, slippage = 0.5, retrieveCallDataOnly?: boolean): Promise<ethers.ContractTransactionResponse | ICalldata> => {
     const [inputCoinAddress, outputCoinAddress] = _getCoinAddresses(inputCoin, outputCoin);
     const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
 
-    await swapApprove(inputCoin, amount);
+    if (!retrieveCallDataOnly) {
+        await swapApprove(inputCoin, amount);
+    }
     const { route, output } = await getBestRouteAndOutput(inputCoinAddress, outputCoinAddress, amount);
 
     if (route.length === 0) {
@@ -773,16 +775,27 @@ export const swap = async (inputCoin: string, outputCoin: string, amount: number
     const contract = curve.contracts[curve.constants.ALIASES.router].contract;
     const value = isEth(inputCoinAddress) ? _amount : curve.parseUnits("0");
 
-    await curve.updateFeeData();
-    const gasLimit = (DIGas(await contract.exchange.estimateGas(
-        _route,
-        _swapParams,
-        _amount,
-        _minRecvAmount,
-        _pools,
-        { ...curve.constantOptions, value }
-    ))) * (curve.chainId === 1 ? curve.parseUnits("130", 0) : curve.parseUnits("160", 0)) / curve.parseUnits("100", 0);
-    return await contract.exchange(_route, _swapParams, _amount, _minRecvAmount, _pools, { ...curve.options, value, gasLimit })
+    if (!retrieveCallDataOnly) {
+        await curve.updateFeeData();
+        const gasLimit = (await contract.exchange.estimateGas(
+            _route,
+            _swapParams,
+            _amount,
+            _minRecvAmount,
+            _pools,
+            { ...curve.constantOptions, value }
+        )) * (curve.chainId === 1 ? curve.parseUnits("130", 0) : curve.parseUnits("160", 0)) / curve.parseUnits("100", 0);
+        return await contract.exchange(_route, _swapParams, _amount, _minRecvAmount, _pools, { ...curve.options, value, gasLimit })
+    } else {
+        const calldata = contract.interface.encodeFunctionData("exchange(address[11],uint256[5][5],uint256,uint256,address[5])", [_route, _swapParams, _amount, _minRecvAmount, _pools])
+        return {
+            route: route,
+            actualQuote: fromBN(BN(output), outputCoinDecimals).toString(),
+            minReturnAmount: _minRecvAmount.toString(),
+            targetDex: (await contract.getAddress()),
+            calldata: calldata,
+        }
+    }
 }
 
 export const getSwappedAmount = async (tx: ethers.ContractTransactionResponse, outputCoin: string): Promise<string> => {
@@ -801,7 +814,7 @@ export const getSwappedAmount = async (tx: ethers.ContractTransactionResponse, o
                 ethers.dataSlice(txInfo.logs[txInfo.logs.length - i].data, 0)
             );
             break;
-        } catch (err) {}
+        } catch (err) { }
     }
 
     if (res === undefined) return '0.0'
