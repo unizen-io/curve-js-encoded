@@ -168,3 +168,5 @@ export interface IProfit {
     symbol: string,
     price: number,
 }
+
+export interface ICalldata { route: IRoute, actualQuote: string, minReturnAmount: string, targetDex: string, calldata: string }

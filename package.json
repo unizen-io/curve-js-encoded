@@ -1,5 +1,5 @@
 {
-  "name": "@curvefi/api",
+  "name": "curvefi-api-encoded-calldata",
   "version": "2.47.5",
   "description": "JavaScript library for curve.fi",
   "main": "lib/index.js",
