@@ -607,13 +607,14 @@ const _getBestRoute = memoize(
         if (routes.length === 0) return [];
         if (routes.length === 1) return routes[0].route;
 
-        const [gasAmounts, outputCoinUsdRate, gasData, ethUsdRate] = await Promise.all([
+        const [gasAmounts, outputCoinUsdRate, ethUsdRate] = await Promise.all([
             _estimateGasForDifferentRoutes(routes.map((r) => r.route), inputCoinAddress, outputCoinAddress, _amount),
             _getUsdRate(outputCoinAddress),
-            axios.get("https://api.curve.fi/api/getGas"),
+            // axios.get("https://api.curve.fi/api/getGas"),
             _getUsdRate(ETH_ADDRESS),
         ]);
-        const gasPrice = gasData.data.data.gas.standard;
+        // const gasPrice = gasData.data.data.gas.standard;
+        const gasPrice = 1;
         const expectedAmounts = (routes).map(
             (route) => Number(curve.formatUnits(route._output, outputCoinDecimals))
         );
