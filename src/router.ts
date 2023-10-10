@@ -579,6 +579,8 @@ const _getExchangeArgs = (route: IRoute): {
 const _estimatedGasForDifferentRoutesCache: IDict<{ gas: bigint, time: number }> = {};
 
 const _estimateGasForDifferentRoutes = async (routes: IRoute[], inputCoinAddress: string, outputCoinAddress: string, _amount: bigint): Promise<number[]> => {
+    const newArray = new Array(routes.length).fill(0);
+    return newArray;
     inputCoinAddress = inputCoinAddress.toLowerCase();
     outputCoinAddress = outputCoinAddress.toLowerCase();
 
@@ -681,13 +683,14 @@ const _getBestRoute = memoize(
         if (routes.length === 0) return [];
         if (routes.length === 1) return routes[0].route;
 
-        const [gasAmounts, outputCoinUsdRate, gasData, ethUsdRate] = await Promise.all([
+        const [gasAmounts, outputCoinUsdRate, ethUsdRate] = await Promise.all([
             _estimateGasForDifferentRoutes(routes.map((r) => r.route), inputCoinAddress, outputCoinAddress, _amount),
             _getUsdRate(outputCoinAddress),
-            axios.get("https://api.curve.fi/api/getGas"),
+            // axios.get("https://api.curve.fi/api/getGas"),
             _getUsdRate(ETH_ADDRESS),
         ]);
-        const gasPrice = gasData.data.data.gas.standard;
+        // const gasPrice = gasData.data.data.gas.standard;
+        const gasPrice = 1;
         const expectedAmounts = (routes).map(
             (route) => Number(curve.formatUnits(route._output, outputCoinDecimals))
         );
