@@ -831,7 +831,7 @@ export const swapEstimateGas = async (inputCoin: string, outputCoin: string, amo
 export const swap = async (inputCoin: string, outputCoin: string, amount: number | string, slippage = 0.5, retrieveCallDataOnly?: boolean): Promise<ethers.ContractTransactionResponse | ICalldata> => {
     const [inputCoinAddress, outputCoinAddress] = _getCoinAddresses(inputCoin, outputCoin);
     const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
-
+    console.log('new curve')
     if (!retrieveCallDataOnly) {
         await swapApprove(inputCoin, amount);
     }
