@@ -11,8 +11,8 @@ export const ALIASES_ETHEREUM = lowerCaseValues({
     "address_provider": "0x0000000022d53366457f9d5e68ec105046fc4383",
     "router": "0xF0d4c12A5768D806021F80a262B4d39d26C58b8D",
     "deposit_and_stake": "0x271fbE8aB7f1fB262f81C77Ea5303F03DA9d3d6A", // <--- CHANGE
-    "stable_calc": "0xCA8d0747B5573D69653C3aC22242e6341C36e4b4", // <-- CHANGED
-    "crypto_calc": '0xA72C85C258A81761433B4e8da60505Fe3Dd551CC', // <--- NEW
+    "stable_calc": "0x0DCDED3545D565bA3B19E683431381007245d983", // <-- CHANGE
+    "crypto_calc": '0xA72C85C258A81761433B4e8da60505Fe3Dd551CC', // <--- CHANGE
     "factory": '0xb9fc157394af804a3578134a6585c0dc9cc990d4', // <--- CHANGE
     "crvusd_factory": '0x4F8846Ae9380B90d2E71D5e3D042dff3E7ebb40d', // <--- CHANGE
     "eywa_factory": '0x37F22A0B028f2152e6CAcef210e0C4d3b875f367', // <--- DUMMY
@@ -114,6 +114,7 @@ export const ALIASES_OPTIMISM = lowerCaseValues({
     "crypto_factory": '0xF18056Bbd320E96A48e3Fbf8bC061322531aac99', // <--- TODO CHANGE
     "tricrypto_factory": '0x0c0e5f2fF0ff18a3be9b835635039256dC4B4963', // <--- TODO CHANGE
     "factory_admin": "",
+    "gas_oracle": '0xc0d3C0d3C0d3c0D3C0D3C0d3C0d3C0D3C0D3000f', // <-- NEW
 });
 
 export const ALIASES_XDAI = lowerCaseValues({
