@@ -51,6 +51,9 @@ import {
     sendBlockhashEstimateGas,
     submitProof,
     submitProofEstimateGas,
+    claimFeesCrvUSDEstimateGas,
+    claimableFeesCrvUSD,
+    claimFeesCrvUSD,
 } from "./boosting.js";
 import {
     getBalances,
@@ -68,6 +71,7 @@ import {
     hasDepositAndStake,
     hasRouter,
     getBasePools,
+    getGasPrice,
 } from "./utils.js";
 import {
     deployStablePlainPool,
@@ -130,6 +134,9 @@ import {
     userProposalVotes,
     voteForProposalEstimateGas,
     voteForProposal,
+    executeVote,
+    executeVoteEstimateGas,
+    isCanVoteExecute,
 } from "./dao.js";
 
 async function init (
@@ -167,6 +174,7 @@ const curve = {
     getGasPriceFromL1,
     getGasPriceFromL2,
     getGasInfoForL2,
+    getGasPrice,
     getTVL,
     getBalances,
     getAllowance,
@@ -310,6 +318,8 @@ const curve = {
         withdrawLockedCrv,
         claimableFees,
         claimFees,
+        claimableFeesCrvUSD,
+        claimFeesCrvUSD,
         estimateGas: {
             approve: approveEstimateGas,
             createLock: createLockEstimateGas,
@@ -317,6 +327,7 @@ const curve = {
             increaseUnlockTime: increaseUnlockTimeEstimateGas,
             withdrawLockedCrv: withdrawLockedCrvEstimateGas,
             claimFees: claimFeesEstimateGas,
+            claimFeesCrvUSD: claimFeesCrvUSDEstimateGas,
         },
         sidechain: {
             lastEthBlock,
@@ -384,6 +395,8 @@ const curve = {
         userProposalVotes,
         // Transaction methods
         voteForProposal,
+        executeVote,
+        isCanVoteExecute,
 
         estimateGas: {
             // --- CRV lock ---
@@ -397,6 +410,7 @@ const curve = {
             voteForGauge: voteForGaugeEstimateGas,
             // --- Proposal voting ---
             voteForProposal: voteForProposalEstimateGas,
+            executeVote: executeVoteEstimateGas,
         },
     },
 }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import {BrowserProvider, Contract, JsonRpcProvider, Signer} from 'ethers';
-import { Contract as MulticallContract } from "ethcall";
+import { Contract as MulticallContract } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import {
     IBasePoolShortItem,
@@ -244,12 +244,18 @@ export const _ensureAllowance = async (coins: string[], amounts: bigint[], spend
             const contract = curve.contracts[coins[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : amounts[i];
             await curve.updateFeeData();
+
             if (allowance[i] > curve.parseUnits("0")) {
                 const gasLimit = mulBy1_3(DIGas(await contract.approve.estimateGas(spender, curve.parseUnits("0"), curve.constantOptions)));
-                txHashes.push((await contract.approve(spender, curve.parseUnits("0"), { ...curve.options, gasLimit })).hash);
+                const resetTx = await contract.approve(spender, curve.parseUnits("0"), { ...curve.options, gasLimit });
+                txHashes.push(resetTx.hash);
+                await resetTx.wait();
             }
+
             const gasLimit = mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, curve.constantOptions)));
-            txHashes.push((await contract.approve(spender, _approveAmount, { ...curve.options, gasLimit })).hash);
+            const approveTx = await contract.approve(spender, _approveAmount, { ...curve.options, gasLimit });
+            txHashes.push(approveTx.hash);
+            await approveTx.wait();
         }
     }
 
@@ -447,6 +453,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         324: 'zksync',
         1284: 'moonbeam',
         2222: 'kava',
+        5000: 'mantle',
         8453: 'base',
         42220: 'celo',
         43114: 'avalanche',
@@ -466,6 +473,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         324: 'ethereum',
         1284: 'moonbeam',
         2222: 'kava',
+        5000: 'mantle',
         8453: 'ethereum',
         42220: 'celo',
         43114: 'avalanche-2',
@@ -532,6 +540,11 @@ export const getBaseFeeByLastBlock = async ()  => {
     }
 }
 
+export const getGasPrice = async ()  => {
+    const provider = curve.provider;
+    return Number((Number((await provider.getFeeData()).gasPrice) / 1e9).toFixed(2));
+}
+
 export const getGasPriceFromL1 = async (): Promise<number> => {
     if(L2Networks.includes(curve.chainId) && curve.L1WeightedGasPrice) {
         return curve.L1WeightedGasPrice + 1e9; // + 1 gwei
@@ -544,6 +557,12 @@ export const getGasPriceFromL2 = async (): Promise<number> => {
     if(curve.chainId === 42161) {
         return await getBaseFeeByLastBlock()
     }
+    if(curve.chainId === 196) {
+        return await getGasPrice() // gwei
+    }
+    if(curve.chainId === 5000) {
+        return await getGasPrice() // gwei
+    }
     if(L2Networks.includes(curve.chainId)) {
         const gasPrice = await curve.contracts[curve.constants.ALIASES.gas_oracle_blob].contract.gasPrice({"gasPrice":"0x2000000"});
         return Number(gasPrice);
@@ -552,8 +571,21 @@ export const getGasPriceFromL2 = async (): Promise<number> => {
     }
 }
 
-export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
+export const getGasInfoForL2 = async (): Promise<Record<string, number | null>> => {
     if(curve.chainId === 42161) {
+        const baseFee = await getBaseFeeByLastBlock()
+
+        return  {
+            maxFeePerGas: Number(((baseFee * 1.1) + 0.01).toFixed(2)),
+            maxPriorityFeePerGas: 0.01,
+        }
+    } else if(curve.chainId === 196) {
+        const gasPrice = await getGasPrice()
+
+        return  {
+            gasPrice,
+        }
+    } else if(curve.chainId === 5000) {
         const baseFee = await getBaseFeeByLastBlock()
 
         return  {
@@ -741,7 +773,7 @@ export const getBasePools = async (): Promise<IBasePoolShortItem[]> => {
     const factoryContract = curve.contracts[curve.constants.ALIASES['stable_ng_factory']].contract;
     const factoryMulticallContract = curve.contracts[curve.constants.ALIASES['stable_ng_factory']].multicallContract;
 
-    const basePoolCount = Number(curve.formatUnits(await factoryContract.base_pool_count(curve.constantOptions), 0));
+    const basePoolCount = Number(curve.formatUnits(await factoryContract.base_pool_count(), 0));
 
     const calls = [];
     for (let i = 0; i < basePoolCount; i++) {
