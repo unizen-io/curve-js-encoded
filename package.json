@@ -1,6 +1,6 @@
 {
   "name": "@unizen-io/curvefi-api-encoded-calldata",
-  "version": "2.28.5-8",
+  "version": "2.58.5-6",
   "description": "JavaScript library for curve.fi",
   "main": "lib/index.js",
   "author": "Macket",
