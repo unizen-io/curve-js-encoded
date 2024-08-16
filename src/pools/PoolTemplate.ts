@@ -402,6 +402,7 @@ export class PoolTemplate {
 
             try {
                 const totalLiquidity = poolsData.filter((data) => data.address.toLowerCase() === this.address.toLowerCase())[0].usdTotal;
+                console.log(this.id, "statsTotalLiquidity use api", String(totalLiquidity))
                 return String(totalLiquidity);
             } catch (err) {
                 console.log(this.id, (err as Error).message);
@@ -416,7 +417,7 @@ export class PoolTemplate {
         const prices = await Promise.all(promises);
         const totalLiquidity = (balances as string[]).reduce(
             (liquidity: number, b: string, i: number) => liquidity + (Number(b) * (prices[i] as number)), 0);
-
+        console.log(this.id, "statsTotalLiquidity final", totalLiquidity.toFixed(8))
         return totalLiquidity.toFixed(8)
     }
 
