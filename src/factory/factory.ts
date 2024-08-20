@@ -1,4 +1,4 @@
-import { Contract as MulticallContract } from "ethcall";
+import { Contract as MulticallContract } from "@curvefi/ethcall";
 import { curve } from "../curve.js";
 import {IDict, IPoolData, ICurve, REFERENCE_ASSET, IPoolDataShort} from "../interfaces";
 import ERC20ABI from "../constants/abis/ERC20.json" assert { type: 'json' };
@@ -73,6 +73,7 @@ async function getFactoryIdsAndSwapAddresses(this: ICurve, fromIdx = 0, factoryA
     const factoryMulticallContract = this.contracts[factoryAddress].multicallContract;
 
     const poolCount = Number(curve.formatUnits(await factoryContract.pool_count(this.constantOptions), 0));
+
     const calls = [];
     for (let i = fromIdx; i < poolCount; i++) {
         calls.push(factoryMulticallContract.pool_list(i));
@@ -317,7 +318,8 @@ export async function getFactoryPoolData(this: ICurve, fromIdx = 0, swapAddress?
                 wrapped_decimals: [...coinAddresses[i].map((addr) => coinAddressDecimalsDict[addr])],
                 swap_abi: swapABIs[i],
                 gauge_abi: this.chainId === 1 ? factoryGaugeABI : gaugeChildABI,
-                is_stable_ng: factoryAddress === curve.constants.ALIASES.stable_ng_factory,
+
+                is_ng: factoryAddress === curve.constants.ALIASES.stable_ng_factory,
             };
         } else {
             const allPoolsData = {...this.constants.POOLS_DATA, ...this.constants.FACTORY_POOLS_DATA, ...FACTORY_POOLS_DATA};
@@ -362,7 +364,7 @@ export async function getFactoryPoolData(this: ICurve, fromIdx = 0, swapAddress?
                 swap_abi: swapABIs[i],
                 gauge_abi: this.chainId === 1 ? factoryGaugeABI : gaugeChildABI,
                 deposit_abi: basePoolZap.ABI,
-                is_stable_ng: factoryAddress === curve.constants.ALIASES.stable_ng_factory,
+                is_ng: factoryAddress === curve.constants.ALIASES.stable_ng_factory,
             };
         }
     }
