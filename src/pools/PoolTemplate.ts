@@ -402,7 +402,7 @@ export class PoolTemplate {
 
             try {
                 const totalLiquidity = poolsData.filter((data) => data.address.toLowerCase() === this.address.toLowerCase())[0].usdTotal;
-                console.log(this.id, "statsTotalLiquidity use api", String(totalLiquidity))
+                // console.log(this.id, "statsTotalLiquidity use api", String(totalLiquidity))
                 return String(totalLiquidity);
             } catch (err) {
                 console.log(this.id, (err as Error).message);

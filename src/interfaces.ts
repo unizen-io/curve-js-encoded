@@ -20,6 +20,7 @@ export interface IPoolData {
     reference_asset: REFERENCE_ASSET,
     swap_address: string,
     token_address: string,
+    amplification_coeff?: number,
     gauge_address: string,
     deposit_address?: string,
     sCurveRewards_address?: string,

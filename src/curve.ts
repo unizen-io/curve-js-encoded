@@ -6,6 +6,8 @@ import {
     Numeric,
     AbstractProvider,
 } from "ethers";
+import { PublicClient, createPublicClient } from 'viem'
+import { getPublicClient } from './helpers.js';
 import { Provider as MulticallProvider, Contract as MulticallContract } from "@curvefi/ethcall";
 import { getFactoryPoolData } from "./factory/factory.js";
 import { getFactoryPoolsDataFromApi } from "./factory/factory-api.js";
@@ -410,6 +412,7 @@ const OLD_CHAINS = [1, 10, 56, 100, 137, 250, 1284, 2222, 8453, 42161, 42220, 43
 
 class Curve implements ICurve {
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider;
+    viemProvider: PublicClient;
     multicallProvider: MulticallProvider;
     signer: ethers.Signer | null;
     signerAddress: string;
@@ -443,6 +446,8 @@ class Curve implements ICurve {
     constructor() {
         // @ts-ignore
         this.provider = null;
+        // @ts-ignore
+        this.viemProvider = null;
         // @ts-ignore
         this.signer = null;
         this.signerAddress = '';
@@ -483,6 +488,8 @@ class Curve implements ICurve {
         // @ts-ignore
         this.provider = null;
         // @ts-ignore
+        this.viemProvider = null;
+        // @ts-ignore
         this.signer = null;
         this.signerAddress = '';
         this.chainId = 1;
@@ -519,6 +526,8 @@ class Curve implements ICurve {
         // JsonRpc provider
         if (providerType.toLowerCase() === 'JsonRpc'.toLowerCase()) {
             providerSettings = providerSettings as { url: string, privateKey: string, batchMaxCount? : number };
+            
+            this.viemProvider = getPublicClient( options.chainId ?? 1, providerSettings.url ?? '')
 
             let jsonRpcApiProviderOptions;
             if ( providerSettings.batchMaxCount ) {
