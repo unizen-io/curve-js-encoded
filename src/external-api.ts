@@ -14,9 +14,37 @@ import {
 
 export const _getPoolsFromApi = memoize(
     async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolDataFromApi> => {
+        const emptyPoolData: IExtendedPoolDataFromApi = { poolData: [], tvl: 0, tvlAll: 0 };
+        if (poolType === 'factory') {
+            const invalidPools: INetworkName[] = ['x-layer', 'fraxtal', 'mantle', 'aurora'];
+            if(invalidPools.includes(network)){
+                return Promise.resolve(emptyPoolData);
+            }
+        }
+        if (poolType === 'factory-crvusd' && network !== 'ethereum') {
+            return Promise.resolve(emptyPoolData);
+        }
+        if ((poolType === 'factory-eywa' && network !== 'fantom')) {
+            return Promise.resolve(emptyPoolData);
+        }
+        if (poolType === 'factory-crypto'){
+            const validPools: INetworkName[] = ['ethereum', 'bsc', 'polygon', 'fantom', 'mantle', 'base'];
+            if (!validPools.includes(network)) {
+                return Promise.resolve(emptyPoolData);
+            }
+        }
+        if (poolType === 'factory-twocrypto' || poolType === 'factory-tricrypto'){
+            const invalidPools: INetworkName[] = ['zksync', 'moonbeam'];
+            if(invalidPools.includes(network)){
+                return Promise.resolve(emptyPoolData);
+            }
+        }
+        if ((poolType === 'factory-stable-ng' && network === 'aurora')) {
+            return Promise.resolve(emptyPoolData);
+        }
         const url = `https://api.curve.fi/api/getPools/${network}/${poolType}`;
         const response = await axios.get(url, { validateStatus: () => true });
-        return response.data.data ?? { poolData: [], tvl: 0, tvlAll: 0 };
+        return response.data.data ?? emptyPoolData;
     },
     {
         promise: true,
