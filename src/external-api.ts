@@ -66,6 +66,11 @@ export const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExten
     ]);
 }
 
+export const _getPoolsFromApiByPoolName = async (network: INetworkName, pools: IPoolType[]): Promise<IExtendedPoolDataFromApi[]> => {
+    const promises = pools.map((pool) => _getPoolsFromApi(network, pool));
+    return await Promise.all(promises);
+}
+
 export const _getSubgraphData = memoize(
     async (network: INetworkName): Promise<IVolumeAndAPYs> => {
         const url = `https://api.curve.fi/api/getSubgraphData/${network}`;

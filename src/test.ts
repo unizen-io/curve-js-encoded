@@ -8,7 +8,7 @@ const dstTokenAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // usdt
 const amountIn = '10';
 
 // To run this test:
-// npx ts-node --project tsconfig.build.json src/test.tsß
+// npx ts-node --project tsconfig.build.json src/test.ts
 export const main = async () => {
     console.log('start')
     await curve.init("JsonRpc", { url: rpc }, { gasPrice: 0, maxFeePerGas: 0, maxPriorityFeePerGas: 0, chainId });
