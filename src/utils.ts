@@ -22,6 +22,23 @@ import ERC20Abi from './constants/abis/ERC20.json' assert { type: 'json' };
 import { L2Networks } from './constants/L2Networks.js';
 import { volumeNetworks } from "./constants/volumeNetworks.js";
 import { getPool } from "./pools/index.js";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+/*
+  db : for the /private/* path of the backend
+  cmc : for the /data/* path of the backend
+  rpcProxy : for the proxies
+*/
+export function getUnizenBackendUrl(domainPrefix: 'db' | 'cmc' | 'rpcproxy'): string {
+    const isProduction = process.env.CUSTOM_NODE_ENV === 'production';
+    let apiUrl = isProduction ? 'https://api.zcx.com' : 'https://api-dev.zcx.com';
+    if (process.env.ENABLE_K8S_ENV === 'true') {
+        apiUrl = `http://api-${domainPrefix}:8080`;
+    }
+    return apiUrl;
+}
 
 export const ETH_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 // export const MAX_ALLOWANCE = curve.parseUnits(new BigNumber(2).pow(256).minus(1).toFixed(), 0);

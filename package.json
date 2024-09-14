@@ -35,8 +35,8 @@
     "@curvefi/ethcall": "6.0.7",
     "axios": "^0.21.1",
     "bignumber.js": "^9.0.1",
+    "dotenv": "^16.4.5",
     "ethers": "^6.11.0",
-    "global": "^4.4.0",
     "memoizee": "^0.4.15",
     "viem": "^2.19.6"
   }

@@ -2,7 +2,7 @@ import { getPool } from "./poolConstructor.js";
 import { IDict } from "../interfaces";
 import { curve } from "../curve.js";
 import { _getRewardsFromApi, _getUsdRate, _setContracts, toBN } from "../utils.js";
-import { _getPoolsFromApiByPoolName } from "../external-api.js";
+import { _getAllPoolsFromApi } from "../external-api.js";
 import ERC20Abi from "../constants/abis/ERC20.json" assert { type: 'json' };
 
 // _userLpBalance: { address: { poolId: { _lpBalance: 0, time: 0 } } }
@@ -359,7 +359,7 @@ export const getUserPoolList = async (address = curve.signerAddress, useApi = tr
 
 export const _getAmplificationCoefficientsFromApi = async (): Promise<IDict<number>> => {
     const network = curve.constants.NETWORK_NAME;
-    const allTypesExtendedPoolData = await _getPoolsFromApiByPoolName(network, ['main', 'crypto']);
+    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
     const amplificationCoefficientDict: IDict<number> = {};
 
     for (const extendedPoolData of allTypesExtendedPoolData) {

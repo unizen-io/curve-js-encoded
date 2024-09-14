@@ -227,7 +227,7 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
     const ALL_POOLS_DATA = curve.getPoolsData();
     const ALL_POOLS = Object.entries(ALL_POOLS_DATA).filter(([id, _]) => !["crveth", "y", "busd", "pax"].includes(id));
     
-    const amplificationCoefficientDict = await _getAmplificationCoefficientsFromApi();
+    const amplificationCoefficientDict = curve.poolAmplifications; 
 
     for (const [poolId, poolData] of ALL_POOLS) {
         const wrappedCoinAddresses = poolData.wrapped_coin_addresses.map((a: string) => a.toLowerCase());
@@ -569,10 +569,12 @@ const _getBestRoute = memoize(
         const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
         const _amount = parseUnits(amount, inputCoinDecimals);
         if (_amount === curve.parseUnits("0")) return [];
-
+        const start0 = new Date().getTime();
         const routesRaw: IRouteOutputAndCost[] = (await _findRoutes(inputCoinAddress, outputCoinAddress)).map(
             (route) => ({ route, _output: curve.parseUnits("0"), outputUsd: 0, txCostUsd: 0 })
         );
+        const start1 = new Date().getTime();
+        console.log('find route time', start1-start0, 'ms');
         const routes: IRouteOutputAndCost[] = [];
 
         try {
@@ -600,10 +602,12 @@ const _getBestRoute = memoize(
                 routesRaw[i]._output = multiCallResult[i].result as bigint;
                 routes.push(routesRaw[i]);
             }
+            const start2 = new Date().getTime();
+            console.log('get output time', start2-start1, 'ms');
         } catch (err) {
             const contract = curve.contracts[curve.constants.ALIASES.router].contract;
             const _outputs = [];
-            const start2 = new Date().getTime();
+            
             for (const r of routesRaw) {
                 const { _route, _swapParams, _pools } = _getExchangeArgs(r.route);
                 try {
@@ -625,16 +629,22 @@ const _getBestRoute = memoize(
                 routesRaw[i]._output = _outputs[i];
                 routes.push(routesRaw[i]);
             }
+            const start3 = new Date().getTime();
+            console.log('get output time in catch', start3-start1, 'ms');
         }
         if (routes.length === 0) return [];
         if (routes.length === 1) return routes[0].route;
 
-        const [gasAmounts, outputCoinUsdRate, ethUsdRate] = await Promise.all([
-            _estimateGasForDifferentRoutes(routes.map((r) => r.route), inputCoinAddress, outputCoinAddress, _amount),
+        const start4 = new Date().getTime();
+        const gasAmounts = Array(routes.length).fill(0);
+        const [outputCoinUsdRate, ethUsdRate] = await Promise.all([
+            // _estimateGasForDifferentRoutes(routes.map((r) => r.route), inputCoinAddress, outputCoinAddress, _amount),
             _getUsdRate(outputCoinAddress),
             // axios.get("https://api.curve.fi/api/getGas"),
             _getUsdRate(ETH_ADDRESS),
         ]);
+        const start5 = new Date().getTime();
+        console.log('estimate gas time', start5-start4, 'ms');
 
         // const gasPrice = gasData.data.data.gas.standard;
         const gasPrice = 1;

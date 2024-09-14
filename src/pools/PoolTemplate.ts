@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import memoize from "memoizee";
-import {_getAllGaugesFormatted, _getPoolsFromApi} from '../external-api.js';
+import {_getAllGaugesFormatted, _getPoolsLiquidityFromApi, _getPoolsFromApi} from '../external-api.js';
 import {
     _getCoinAddresses,
     _getBalances,
@@ -372,7 +372,7 @@ export class PoolTemplate {
 
     private statsTotalLiquidity = async (useApi = true): Promise<string> => {
         if (curve.chainId === 1 && this.id === "crveth") return "0"
-
+        
         if (this.isLlamma) {
             const stablecoinContract = curve.contracts[this.underlyingCoinAddresses[0]].multicallContract;
             const collateralContract = curve.contracts[this.underlyingCoinAddresses[1]].multicallContract;
@@ -399,14 +399,17 @@ export class PoolTemplate {
                 poolType = this.id.replace(/-\d+$/, '');
                 poolType = poolType.replace(/-v2$/, '');
             }
-
-            const poolsData = (await _getPoolsFromApi(network, poolType as IPoolType)).poolData;
+            
+            const poolsData = (await  _getPoolsLiquidityFromApi(network, poolType as IPoolType)).poolData;
+            // const poolsData = (await _getPoolsFromApi(network, poolType as IPoolType)).poolData;
 
             try {
-                const totalLiquidity = poolsData.filter((data) => data.address.toLowerCase() === this.address.toLowerCase())[0].usdTotal;
+                // const totalLiquidity = poolsData.filter((data) => data.address.toLowerCase() === this.address.toLowerCase())[0].usdTotal;
+                const totalLiquidity = poolsData.filter((data) => data.id === this.id)[0].usdTotal;
                 return String(totalLiquidity);
             } catch (err) {
                 console.log(this.id, (err as Error).message);
+                console.log('this.id', this.id, 'pool type', poolType)
             }
         }
 

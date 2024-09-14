@@ -124,6 +124,11 @@ export interface IPoolDataFromApi {
     gaugeCrvApy: [number | null, number | null],
 }
 
+export interface IPoolLiquidityFromApi {
+    id: string,
+    usdTotal: number,
+}
+
 export interface IPoolDataShort {
     id: string,
     address: string,
@@ -138,6 +143,12 @@ export interface ISubgraphPoolData {
 
 export interface IExtendedPoolDataFromApi {
     poolData: IPoolDataFromApi[],
+    tvl?: number,
+    tvlAll: number,
+}
+
+export interface IExtendedPoolLiquidityFromApi {
+    poolData: IPoolLiquidityFromApi[],
     tvl?: number,
     tvlAll: number,
 }
