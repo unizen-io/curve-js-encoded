@@ -11,7 +11,7 @@ import {
     IDaoProposalListItem,
     IVolumeAndAPYs,
 } from "./interfaces";
-import { getUnizenBackendUrl } from './utils';
+import { getUnizenBackendUrl } from './utils.js';
 
 const _poolExist = (network: INetworkName, poolType: IPoolType): boolean => {
     if (poolType === 'factory') {
@@ -52,9 +52,8 @@ export const _getPoolsFromApi = memoize(
             return Promise.resolve(emptyPoolData); 
         }
         
-        // const url = `https://api.curve.fi/api/getPools/${network}/${poolType}`;
         const url = `${getUnizenBackendUrl('cmc')}/private/curve/getPools/${network}/${poolType}`;
-        console.log('_getPoolsFromApi', url)
+        
         const response = await axios.get(url, { validateStatus: () => true });
         return response.data.data ?? emptyPoolData;
     },
@@ -71,10 +70,8 @@ export const _getPoolsLiquidityFromApi = memoize(
             return Promise.resolve(emptyPoolData); 
         }
         
-        // const url = `https://api.curve.fi/api/getPoolsTvl/${network}/${poolType}`;
         const url = `${getUnizenBackendUrl('cmc')}/private/curve/getPoolsTvl/${network}/${poolType}`;
-        console.log('_getPoolsLiquidityFromApi', url)
-
+        
         const response = await axios.get(url, { validateStatus: () => true });
         return response.data.data ?? emptyPoolData;
     },

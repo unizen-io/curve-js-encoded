@@ -54,24 +54,24 @@ export const main = async () => {
     )) as ICalldata; 
     console.log('quote', swapTx.actualQuote)
 
-    await sleep(60000*6);
-    console.log("Start get route second time")
-    const start2 = new Date().getTime()
-    await curve.router.getBestRouteAndOutput(
-        srcTokenAddress,
-        dstTokenAddress,
-        amountIn
-    );
-    const end2 = new Date().getTime()
-    console.log("Done get route second time", end2 - start2, 'ms')
-    const swapTx1 = (await curve.router.swap(
-        srcTokenAddress,
-        dstTokenAddress,
-        amountIn,
-        0.01,
-        true
-    )) as ICalldata; 
-    console.log('quote', swapTx1.actualQuote)
+    // await sleep(60000*6);
+    // console.log("Start get route second time")
+    // const start2 = new Date().getTime()
+    // await curve.router.getBestRouteAndOutput(
+    //     srcTokenAddress,
+    //     dstTokenAddress,
+    //     amountIn
+    // );
+    // const end2 = new Date().getTime()
+    // console.log("Done get route second time", end2 - start2, 'ms')
+    // const swapTx1 = (await curve.router.swap(
+    //     srcTokenAddress,
+    //     dstTokenAddress,
+    //     amountIn,
+    //     0.01,
+    //     true
+    // )) as ICalldata; 
+    // console.log('quote', swapTx1.actualQuote)
 };
 
 main().catch((err) => {

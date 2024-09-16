@@ -574,7 +574,7 @@ const _getBestRoute = memoize(
             (route) => ({ route, _output: curve.parseUnits("0"), outputUsd: 0, txCostUsd: 0 })
         );
         const start1 = new Date().getTime();
-        console.log('find route time', start1-start0, 'ms');
+        console.log('CURVE: find route time', start1-start0, 'ms');
         const routes: IRouteOutputAndCost[] = [];
 
         try {
@@ -603,7 +603,7 @@ const _getBestRoute = memoize(
                 routes.push(routesRaw[i]);
             }
             const start2 = new Date().getTime();
-            console.log('get output time', start2-start1, 'ms');
+            console.log('CURVE: get output time', start2-start1, 'ms');
         } catch (err) {
             const contract = curve.contracts[curve.constants.ALIASES.router].contract;
             const _outputs = [];
@@ -630,7 +630,7 @@ const _getBestRoute = memoize(
                 routes.push(routesRaw[i]);
             }
             const start3 = new Date().getTime();
-            console.log('get output time in catch', start3-start1, 'ms');
+            console.log('CURVE: get output time in catch', start3-start1, 'ms');
         }
         if (routes.length === 0) return [];
         if (routes.length === 1) return routes[0].route;
@@ -644,7 +644,7 @@ const _getBestRoute = memoize(
             _getUsdRate(ETH_ADDRESS),
         ]);
         const start5 = new Date().getTime();
-        console.log('estimate gas time', start5-start4, 'ms');
+        console.log('CURVE: estimate gas time', start5-start4, 'ms');
 
         // const gasPrice = gasData.data.data.gas.standard;
         const gasPrice = 1;
