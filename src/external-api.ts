@@ -97,8 +97,6 @@ export const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExten
 
 export const _getAllPoolsLiquidityFromApi = memoize(
     async (network: INetworkName): Promise<IPoolLiquidityFromApi[]> => {
-        const start = new Date().getTime();
-
         let allPoolsTvl: IPoolLiquidityFromApi[] = [];
         const poolTvls = await Promise.all([
             _getPoolsLiquidityFromApi(network, "main"),
@@ -114,8 +112,6 @@ export const _getAllPoolsLiquidityFromApi = memoize(
         poolTvls.forEach((pool) => {
             allPoolsTvl = allPoolsTvl.concat(pool.poolData);
         })
-        const end = new Date().getTime();
-        console.log('_getAllPoolsLiquidityFromApi', end - start, 'ms', network);
         return allPoolsTvl;
     },
     {
@@ -274,11 +270,8 @@ export const _getAllGaugesFormatted = memoize(
 
 export const _getHiddenPools = memoize(
     async (): Promise<IDict<string[]>> => {
-        const start = new Date().getTime();
         const url = `${getUnizenBackendUrl('db')}/private/curve/getHiddenPools`;
         const response = await axios.get(url, { validateStatus: () => true });
-        const end = new Date().getTime();
-        console.log('_getHiddenPools', end - start, 'ms', url);
         return response.data.data;
     },
     {

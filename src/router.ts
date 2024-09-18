@@ -414,11 +414,8 @@ const _findRoutes = async (inputCoinAddress: string, outputCoinAddress: string):
     const routes: IRouteTvl[] = [{ route: [], minTvl: Infinity, totalTvl: 0 }];
     let targetRoutes: IRouteTvl[] = [];
     
-    const start = new Date().getTime();
     const routerGraph = await _buildRouteGraph();
-    console.log('routerGraph', Object.keys(routerGraph).length);
-    const end = new Date().getTime();
-    console.log('_buildRouteGraph time', end - start, 'ms');
+
     const ALL_POOLS = curve.getPoolsData();
 
     while (routes.length > 0) {
@@ -464,7 +461,7 @@ const _findRoutes = async (inputCoinAddress: string, outputCoinAddress: string):
         ...targetRoutes.sort(_sortByTvl).slice(0, MAX_ROUTES_FOR_ONE_COIN),
         ...targetRoutes.sort(_sortByLength).slice(0, MAX_ROUTES_FOR_ONE_COIN),
     ]);
-    console.log('targetRoutes', targetRoutes.length);
+   
     return targetRoutes.map((r) => r.route);
 }
 
