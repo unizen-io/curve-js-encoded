@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import memoize from "memoizee";
-import {_getAllGaugesFormatted, _getPoolsLiquidityFromApi} from '../external-api.js';
+import {_getAllGaugesFormatted, _getAllPoolsLiquidityFromApi} from '../external-api.js';
 import {
     _getCoinAddresses,
     _getBalances,
@@ -400,7 +400,7 @@ export class PoolTemplate {
                 poolType = poolType.replace(/-v2$/, '');
             }
             
-            const poolsData = (await  _getPoolsLiquidityFromApi(network, poolType as IPoolType)).poolData;
+            const poolsData = await  _getAllPoolsLiquidityFromApi(network);
 
             try {
                 const totalLiquidity = poolsData.filter((data) => data.address.toLowerCase() === this.address.toLowerCase())[0].usdTotal;

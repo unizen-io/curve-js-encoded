@@ -3,6 +3,7 @@ import memoize from "memoizee";
 import {
     IExtendedPoolDataFromApi,
     IExtendedPoolLiquidityFromApi,
+    IPoolLiquidityFromApi,
     IDict,
     INetworkName,
     IPoolType,
@@ -52,7 +53,7 @@ export const _getPoolsFromApi = memoize(
             return Promise.resolve(emptyPoolData); 
         }
         
-        const url = `${getUnizenBackendUrl('cmc')}/private/curve/getPools/${network}/${poolType}`;
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getPools/${network}/${poolType}`;
         
         const response = await axios.get(url, { validateStatus: () => true });
         return response.data.data ?? emptyPoolData;
@@ -70,8 +71,7 @@ export const _getPoolsLiquidityFromApi = memoize(
             return Promise.resolve(emptyPoolData); 
         }
         
-        const url = `${getUnizenBackendUrl('cmc')}/private/curve/getPoolsTvl/${network}/${poolType}`;
-        
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getPoolsTvl/${network}/${poolType}`;
         const response = await axios.get(url, { validateStatus: () => true });
         return response.data.data ?? emptyPoolData;
     },
@@ -94,6 +94,35 @@ export const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExten
         _getPoolsFromApi(network, "factory-stable-ng"),
     ]);
 }
+
+export const _getAllPoolsLiquidityFromApi = memoize(
+    async (network: INetworkName): Promise<IPoolLiquidityFromApi[]> => {
+        const start = new Date().getTime();
+
+        let allPoolsTvl: IPoolLiquidityFromApi[] = [];
+        const poolTvls = await Promise.all([
+            _getPoolsLiquidityFromApi(network, "main"),
+            _getPoolsLiquidityFromApi(network, "crypto"),
+            _getPoolsLiquidityFromApi(network, "factory"),
+            _getPoolsLiquidityFromApi(network, "factory-crvusd"),
+            _getPoolsLiquidityFromApi(network, "factory-eywa"),
+            _getPoolsLiquidityFromApi(network, "factory-crypto"),
+            _getPoolsLiquidityFromApi(network, "factory-twocrypto"),
+            _getPoolsLiquidityFromApi(network, "factory-tricrypto"),
+            _getPoolsLiquidityFromApi(network, "factory-stable-ng"),
+        ]);
+        poolTvls.forEach((pool) => {
+            allPoolsTvl = allPoolsTvl.concat(pool.poolData);
+        })
+        const end = new Date().getTime();
+        console.log('_getAllPoolsLiquidityFromApi', end - start, 'ms', network);
+        return allPoolsTvl;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)
 
 export const _getSubgraphData = memoize(
     async (network: INetworkName): Promise<IVolumeAndAPYs> => {
@@ -245,10 +274,11 @@ export const _getAllGaugesFormatted = memoize(
 
 export const _getHiddenPools = memoize(
     async (): Promise<IDict<string[]>> => {
-        // const url = `https://api.curve.fi/api/getHiddenPools`;
-        const url = `${getUnizenBackendUrl('cmc')}/private/curve/getHiddenPools`;
+        const start = new Date().getTime();
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getHiddenPools`;
         const response = await axios.get(url, { validateStatus: () => true });
-
+        const end = new Date().getTime();
+        console.log('_getHiddenPools', end - start, 'ms', url);
         return response.data.data;
     },
     {
