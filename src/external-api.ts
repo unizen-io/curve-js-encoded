@@ -2,6 +2,8 @@ import axios from "axios";
 import memoize from "memoizee";
 import {
     IExtendedPoolDataFromApi,
+    IExtendedPoolLiquidityFromApi,
+    IPoolLiquidityFromApi,
     IDict,
     INetworkName,
     IPoolType,
@@ -10,13 +12,68 @@ import {
     IDaoProposalListItem,
     IVolumeAndAPYs,
 } from "./interfaces";
+import { getUnizenBackendUrl } from './utils.js';
 
+const _poolExist = (network: INetworkName, poolType: IPoolType): boolean => {
+    if (poolType === 'factory') {
+        const invalidPools: INetworkName[] = ['x-layer', 'fraxtal', 'mantle', 'aurora'];
+        if(invalidPools.includes(network)){
+            return false
+        }
+    }
+    if (poolType === 'factory-crvusd' && network !== 'ethereum') {
+        return false
+    }
+    if ((poolType === 'factory-eywa' && network !== 'fantom')) {
+        return false
+    }
+    if (poolType === 'factory-crypto'){
+        const validPools: INetworkName[] = ['ethereum', 'bsc', 'polygon', 'fantom', 'mantle', 'base'];
+        if (!validPools.includes(network)) {
+            return false
+        }
+    }
+    if (poolType === 'factory-twocrypto' || poolType === 'factory-tricrypto'){
+        const invalidPools: INetworkName[] = ['zksync', 'moonbeam'];
+        if(invalidPools.includes(network)){
+            return false
+        }
+    }
+    if ((poolType === 'factory-stable-ng' && network === 'aurora')) {
+        return false
+    }
+
+    return true;
+}
 
 export const _getPoolsFromApi = memoize(
     async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolDataFromApi> => {
-        const url = `https://api.curve.fi/api/getPools/${network}/${poolType}`;
+        const emptyPoolData: IExtendedPoolDataFromApi = { poolData: [], tvl: 0, tvlAll: 0 };
+        if (!_poolExist(network,poolType)) {
+            return Promise.resolve(emptyPoolData); 
+        }
+        
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getPools/${network}/${poolType}`;
+        
         const response = await axios.get(url, { validateStatus: () => true });
-        return response.data.data ?? { poolData: [], tvl: 0, tvlAll: 0 };
+        return response.data.data ?? emptyPoolData;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)
+
+export const _getPoolsLiquidityFromApi = memoize(
+    async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolLiquidityFromApi> => {
+        const emptyPoolData: IExtendedPoolLiquidityFromApi = { poolData: [], tvl: 0, tvlAll: 0 };
+        if (!_poolExist(network,poolType)) {
+            return Promise.resolve(emptyPoolData); 
+        }
+        
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getPoolsTvl/${network}/${poolType}`;
+        const response = await axios.get(url, { validateStatus: () => true });
+        return response.data.data ?? emptyPoolData;
     },
     {
         promise: true,
@@ -37,6 +94,31 @@ export const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExten
         _getPoolsFromApi(network, "factory-stable-ng"),
     ]);
 }
+
+export const _getAllPoolsLiquidityFromApi = memoize(
+    async (network: INetworkName): Promise<IPoolLiquidityFromApi[]> => {
+        let allPoolsTvl: IPoolLiquidityFromApi[] = [];
+        const poolTvls = await Promise.all([
+            _getPoolsLiquidityFromApi(network, "main"),
+            _getPoolsLiquidityFromApi(network, "crypto"),
+            _getPoolsLiquidityFromApi(network, "factory"),
+            _getPoolsLiquidityFromApi(network, "factory-crvusd"),
+            _getPoolsLiquidityFromApi(network, "factory-eywa"),
+            _getPoolsLiquidityFromApi(network, "factory-crypto"),
+            _getPoolsLiquidityFromApi(network, "factory-twocrypto"),
+            _getPoolsLiquidityFromApi(network, "factory-tricrypto"),
+            _getPoolsLiquidityFromApi(network, "factory-stable-ng"),
+        ]);
+        poolTvls.forEach((pool) => {
+            allPoolsTvl = allPoolsTvl.concat(pool.poolData);
+        })
+        return allPoolsTvl;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)
 
 export const _getSubgraphData = memoize(
     async (network: INetworkName): Promise<IVolumeAndAPYs> => {
@@ -188,9 +270,8 @@ export const _getAllGaugesFormatted = memoize(
 
 export const _getHiddenPools = memoize(
     async (): Promise<IDict<string[]>> => {
-        const url = `https://api.curve.fi/api/getHiddenPools`;
+        const url = `${getUnizenBackendUrl('db')}/private/curve/getHiddenPools`;
         const response = await axios.get(url, { validateStatus: () => true });
-
         return response.data.data;
     },
     {

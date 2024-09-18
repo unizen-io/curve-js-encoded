@@ -159,7 +159,7 @@
       }
     ],
     "stateMutability": "nonpayable",
-    "type": "function",
+    "type": "function"
   },
   {
     "name": "claim_many",
