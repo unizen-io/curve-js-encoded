@@ -220,10 +220,9 @@ const _buildRouteGraph = memoize(async (ALL_POOLS_DATA: IDict<IPoolData>): Promi
             }
         }
     }
+
     // const ALL_POOLS_DATA = curve.getPoolsData();
-    const ALL_POOLS = Object.entries(ALL_POOLS_DATA).filter(([id, _]) => !["crveth", "y", "busd", "pax"].includes(id));
-    
-    const amplificationCoefficientDict = curve.poolAmplifications; 
+    // const ALL_POOLS = Object.entries(ALL_POOLS_DATA).filter(([id, _]) => !["crveth", "y", "busd", "pax"].includes(id));
 
     // const BASE_POOL = { ...curve.constants.POOLS_DATA, ...curve.constants.FACTORY_POOLS_DATA };
     // const SECOND_BASE_POOL = {
@@ -232,7 +231,12 @@ const _buildRouteGraph = memoize(async (ALL_POOLS_DATA: IDict<IPoolData>): Promi
     //     ...curve.constants.CRVUSD_FACTORY_POOLS_DATA,
     // }
 
-    for (const [poolId, poolData] of ALL_POOLS) {
+    const amplificationCoefficientDict = curve.poolAmplifications; 
+
+    for (const poolId in ALL_POOLS_DATA) {
+        const poolData = ALL_POOLS_DATA[poolId];
+        if (["crveth", "y", "busd", "pax"].includes(poolId)) continue;
+        
         const wrappedCoinAddresses = poolData.wrapped_coin_addresses;
         const underlyingCoinAddresses = poolData.underlying_coin_addresses;
         const poolAddress = poolData.swap_address;
@@ -255,7 +259,7 @@ const _buildRouteGraph = memoize(async (ALL_POOLS_DATA: IDict<IPoolData>): Promi
         const metaCoinAddresses = basePool ? basePool.underlying_coin_addresses : [];
         let swapAddress = poolData.is_fake ? poolData.deposit_address as string : poolAddress;
         
-        const tvl = (await _getTVL(poolId, ALL_POOLS_DATA[poolId])) * tvlMultiplier;
+        const tvl = (await _getTVL(poolId, poolData)) * tvlMultiplier;
 
         // Skip empty pools
         if (curve.chainId === 1 && tvl < 1000) continue;
