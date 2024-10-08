@@ -77,7 +77,7 @@ const SNX = {
     },
 }
 
-const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> => {
+const _buildRouteGraph = memoize(async (ALL_POOLS_DATA: IDict<IPoolData>): Promise<IDict<IDict<IRouteStep[]>>> => {
     const routerGraph: IDict<IDict<IRouteStep[]>> = {}
 
     // ETH <-> WETH (exclude Celo)
@@ -114,7 +114,7 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
     }
 
     // ETH -> stETH, ETH -> frxETH, ETH -> wBETH (Ethereum only)
-    if (curve.chainId == 1) {
+    if (curve.chainId === 1) {
         for (const outCoin of ["stETH", "frxETH", "wBETH"]) {
             routerGraph[curve.constants.NATIVE_TOKEN.address][curve.constants.COINS[outCoin.toLowerCase()]] = [{
                 poolId: outCoin + " minter",
@@ -130,10 +130,8 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
                 tvl: Infinity,
             }]
         }
-    }
 
-    // stETH <-> wstETH (Ethereum only)
-    if (curve.chainId === 1) {
+        // stETH <-> wstETH (Ethereum only)
         routerGraph[curve.constants.COINS.steth] = {};
         routerGraph[curve.constants.COINS.steth][curve.constants.COINS.wsteth] = [{
             poolId: "wstETH wrapper",
@@ -163,10 +161,8 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
             secondBaseToken: curve.constants.ZERO_ADDRESS,
             tvl: Infinity,
         }];
-    }
 
-    // frxETH <-> sfrxETH (Ethereum only)
-    if (curve.chainId === 1) {
+        // frxETH <-> sfrxETH (Ethereum only)
         routerGraph[curve.constants.COINS.frxeth] = {};
         routerGraph[curve.constants.COINS.frxeth][curve.constants.COINS.sfrxeth] = [{
             poolId: "sfrxETH wrapper",
@@ -224,23 +220,23 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
             }
         }
     }
-    const ALL_POOLS_DATA = curve.getPoolsData();
+    // const ALL_POOLS_DATA = curve.getPoolsData();
     const ALL_POOLS = Object.entries(ALL_POOLS_DATA).filter(([id, _]) => !["crveth", "y", "busd", "pax"].includes(id));
     
     const amplificationCoefficientDict = curve.poolAmplifications; 
 
-    const BASE_POOL = { ...curve.constants.POOLS_DATA, ...curve.constants.FACTORY_POOLS_DATA };
-    const SECOND_BASE_POOL = {
-        ...curve.constants.POOLS_DATA,
-        ...curve.constants.FACTORY_POOLS_DATA,
-        ...curve.constants.CRVUSD_FACTORY_POOLS_DATA,
-    }
+    // const BASE_POOL = { ...curve.constants.POOLS_DATA, ...curve.constants.FACTORY_POOLS_DATA };
+    // const SECOND_BASE_POOL = {
+    //     ...curve.constants.POOLS_DATA,
+    //     ...curve.constants.FACTORY_POOLS_DATA,
+    //     ...curve.constants.CRVUSD_FACTORY_POOLS_DATA,
+    // }
 
     for (const [poolId, poolData] of ALL_POOLS) {
-        const wrappedCoinAddresses = poolData.wrapped_coin_addresses.map((a: string) => a.toLowerCase());
-        const underlyingCoinAddresses = poolData.underlying_coin_addresses.map((a: string) => a.toLowerCase());
-        const poolAddress = poolData.swap_address.toLowerCase();
-        const tokenAddress = poolData.token_address.toLowerCase();
+        const wrappedCoinAddresses = poolData.wrapped_coin_addresses;
+        const underlyingCoinAddresses = poolData.underlying_coin_addresses;
+        const poolAddress = poolData.swap_address;
+        const tokenAddress = poolData.token_address;
         const isAaveLikeLending = poolData.is_lending && wrappedCoinAddresses.length === 3 && !poolData.deposit_address;
         // pool_type: 1 - stable, 2 - twocrypto, 3 - tricrypto, 4 - llamma
         //            10 - stable-ng, 20 - twocrypto-ng, 30 - tricrypto-ng
@@ -248,16 +244,16 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
         if (poolData.is_ng) poolType *= 10;
         const tvlMultiplier = poolData.is_crypto ? 1 : (amplificationCoefficientDict[poolData.swap_address] ?? 1);
         // const tvlMultiplier = poolData.is_crypto ? 1 : (poolData.amplification_coeff ?? 1);
-        const basePool = poolData.is_meta ? BASE_POOL[poolData.base_pool as string] : null;
-        const basePoolAddress = basePool ? basePool.swap_address.toLowerCase() : curve.constants.ZERO_ADDRESS;
-        let baseTokenAddress = basePool ? basePool.token_address.toLowerCase() : curve.constants.ZERO_ADDRESS;
-        const secondBasePool = basePool && basePool.base_pool ? SECOND_BASE_POOL[basePool.base_pool as string] : null;
-        const secondBasePoolAddress = secondBasePool ? secondBasePool.swap_address.toLowerCase() : curve.constants.ZERO_ADDRESS;
+        const basePool = poolData.is_meta ? ALL_POOLS_DATA[poolData.base_pool as string] : null; // ALL_POOLS_DATA is original BASE_POOL
+        const basePoolAddress = basePool ? basePool.swap_address : curve.constants.ZERO_ADDRESS;
+        let baseTokenAddress = basePool ? basePool.token_address : curve.constants.ZERO_ADDRESS;
+        const secondBasePool = basePool && basePool.base_pool ? ALL_POOLS_DATA[basePool.base_pool as string] : null; // ALL_POOLS_DATA is original SECOND_BASE_POOL
+        const secondBasePoolAddress = secondBasePool ? secondBasePool.swap_address : curve.constants.ZERO_ADDRESS;
         // for double meta underlying (crv/tricrypto, wmatic/tricrypto)
-        if (basePool && secondBasePoolAddress !== curve.constants.ZERO_ADDRESS) baseTokenAddress = basePool.deposit_address?.toLowerCase() as string;
-        const secondBaseTokenAddress = secondBasePool ? secondBasePool.token_address.toLowerCase() : curve.constants.ZERO_ADDRESS;
-        const metaCoinAddresses = basePool ? basePool.underlying_coin_addresses.map((a: string) => a.toLowerCase()) : [];
-        let swapAddress = poolData.is_fake ? poolData.deposit_address?.toLowerCase() as string : poolAddress;
+        if (basePool && secondBasePoolAddress !== curve.constants.ZERO_ADDRESS) baseTokenAddress = basePool.deposit_address as string;
+        const secondBaseTokenAddress = secondBasePool ? secondBasePool.token_address : curve.constants.ZERO_ADDRESS;
+        const metaCoinAddresses = basePool ? basePool.underlying_coin_addresses : [];
+        let swapAddress = poolData.is_fake ? poolData.deposit_address as string : poolAddress;
         
         const tvl = (await _getTVL(poolId, ALL_POOLS_DATA[poolId])) * tvlMultiplier;
 
@@ -399,11 +395,13 @@ const _buildRouteGraph = memoize(async (): Promise<IDict<IDict<IRouteStep[]>>> =
 });
 
 const _isVisitedCoin = (coinAddress: string, route: IRouteTvl): boolean => {
-    return route.route.map((r) => r.inputCoinAddress).includes(coinAddress);
+    return route.route.findIndex((item: IRouteStep) => item.inputCoinAddress === coinAddress) !== -1;
+    // return route.route.map((r) => r.inputCoinAddress).includes(coinAddress);
 }
 
 const _isVisitedPool = (poolId: string, route: IRouteTvl): boolean => {
-    return route.route.map((r) => r.poolId).includes(poolId);
+    return route.route.findIndex((item: IRouteStep) => item.poolId === poolId) !== -1;
+    // return route.route.map((r) => r.poolId).includes(poolId);
 }
 
 // Breadth-first search
@@ -414,9 +412,8 @@ const _findRoutes = async (inputCoinAddress: string, outputCoinAddress: string):
     const routes: IRouteTvl[] = [{ route: [], minTvl: Infinity, totalTvl: 0 }];
     let targetRoutes: IRouteTvl[] = [];
     
-    const routerGraph = await _buildRouteGraph();
-
     const ALL_POOLS = curve.getPoolsData();
+    const routerGraph = await _buildRouteGraph(ALL_POOLS);
 
     while (routes.length > 0) {
         // @ts-ignore

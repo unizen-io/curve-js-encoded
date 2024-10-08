@@ -52,6 +52,7 @@ export const main = async () => {
     for (const [key,value] of Object.entries(process.memoryUsage())){
         console.log(`Memory usage by ${key}, ${value/1000000}MB `)
     }
+    console.log("CPU usage", process.cpuUsage());
     // await sleep(60000*6);
     // console.log("Start get route second time")
     // const start2 = new Date().getTime()
