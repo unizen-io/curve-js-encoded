@@ -159,6 +159,7 @@ const curve = {
     init,
     chainId: 0,
     signerAddress: '',
+    getAmplificationCoefficientsFromApi: _curve.getAmplificationCoefficientsFromApi,
     setCustomFeeData,
     getPoolList: _curve.getPoolList,
     getMainPoolList: _curve.getMainPoolList,

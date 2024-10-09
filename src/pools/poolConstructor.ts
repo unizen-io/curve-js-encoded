@@ -21,7 +21,23 @@ import {
     swapWrappedRequiredMixin,
 } from "./mixins/swapWrappedMixins.js";
 import { getCountArgsOfMethodByContract } from "../utils.js";
+import { IPoolData } from '../interfaces.js'
 
+export const getPoolForStatLiquidity = (poolId: string, poolData: IPoolData): PoolTemplate => {
+    return new PoolTemplate(poolId, poolData);
+    // const poolDummy = new PoolTemplate(poolId, poolData);
+    // class Pool extends PoolTemplate {}
+
+    // // statsBalances, keep this because statLiquidity uses function statsUnderlyingBalances()
+    // if (poolDummy.isMeta) {
+    //     Object.assign(Pool.prototype, poolBalancesMetaMixin);
+    // } else if (poolDummy.useLending.reduce((x, y) => x || y)) {
+    //     Object.assign(Pool.prototype, poolBalancesLendingMixin);
+    // }
+
+    // return new Pool(poolId, poolData);
+}
+    
 
 export const getPool = (poolId: string): PoolTemplate => {
     const poolDummy = new PoolTemplate(poolId);
