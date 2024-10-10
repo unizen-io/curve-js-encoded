@@ -427,27 +427,29 @@ const _findRoutes = async (inputCoinAddress: string, outputCoinAddress: string):
         if (inCoin === outputCoinAddress) {
             targetRoutes.push(route);
         } else if (route.route.length < 5) {
+            const routePoolIdsPlusSwapType = route.route.map((s) => s.poolId + "+" + _handleSwapType(s.swapParams[2]));
+            
             for (const outCoin in routerGraph[inCoin]) {
                 if (_isVisitedCoin(outCoin, route)) continue;
 
                 for (const step of routerGraph[inCoin][outCoin]) {
                     const poolData = ALL_POOLS[step.poolId];
-
+                   
                     if (!poolData?.is_lending && _isVisitedPool(step.poolId, route)) continue;
 
                     // 4 --> 6, 5 --> 7 not allowed
                     // 4 --> 7, 5 --> 6 allowed
-                    const routePoolIdsPlusSwapType = route.route.map((s) => s.poolId + "+" + _handleSwapType(s.swapParams[2]));
                     if (routePoolIdsPlusSwapType.includes(step.poolId + "+" + _handleSwapType(step.swapParams[2]))) continue;
 
                     const poolCoins = poolData ? poolData.wrapped_coin_addresses.concat(poolData.underlying_coin_addresses) : [];
+                    const poolCoinsIncludesOutputCoin = poolCoins.includes(outputCoinAddress) && outCoin !== outputCoinAddress;
                     // Exclude such cases as:
                     // cvxeth -> tricrypto2 -> tusd -> susd (cvxeth -> tricrypto2 -> tusd instead)
-                    if (!poolData?.is_lending && poolCoins.includes(outputCoinAddress) && outCoin !== outputCoinAddress) continue;
+                    if (!poolData?.is_lending && poolCoinsIncludesOutputCoin) continue;
                     // Exclude such cases as:
                     // aave -> aave -> 3pool (aave -> aave instead)
-                    if (poolData?.is_lending && poolCoins.includes(outputCoinAddress) && outCoin !== outputCoinAddress && outCoin !== poolData.token_address) continue;
-
+                    if (poolData?.is_lending && poolCoinsIncludesOutputCoin && outCoin !== poolData.token_address) continue;
+                    
                     routes.push({
                         route: [...route.route, step],
                         minTvl: Math.min(step.tvl, route.minTvl),

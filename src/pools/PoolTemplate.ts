@@ -374,6 +374,7 @@ export class PoolTemplate {
         if (curve.chainId === 1 && this.id === "crveth") return "0"
         
         if (this.isLlamma) {
+            return '0';
             const stablecoinContract = curve.contracts[this.underlyingCoinAddresses[0]].multicallContract;
             const collateralContract = curve.contracts[this.underlyingCoinAddresses[1]].multicallContract;
             const ammContract = curve.contracts[this.address].multicallContract;

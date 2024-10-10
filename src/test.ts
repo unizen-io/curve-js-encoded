@@ -1,15 +1,20 @@
 import curve from "./index";
 import { ICalldata } from "./interfaces";
 
+const rpc = "https://silent-white-wave.quiknode.pro/c4ad4fd208cc28788dff5c6ac55e445d91b6d88b/";
+const chainId = 1;
+const srcTokenAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // weth polygon
+// const srcTokenAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // usdc polygon
+const dstTokenAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // usdt polygon
 // const rpc = "https://arb1.arbitrum.io/rpc";
 // const chainId = 42161;
 // const srcTokenAddress = "0xca5ca9083702c56b481d1eec86f1776fdbd2e594"; // rsr polygon
 // const dstTokenAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // weth polygon
 // const dstTokenAddress = "0xaf88d065e77c8cc2239327c5edb3a432268e5831"; // usdc polygon
-const rpc = "https://ancient-dry-friday.matic.quiknode.pro/8ff6b30f0829e4bded452e60d0bcf9ac712002db/";
-const chainId = 137;
-const srcTokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // usdc polygon
-const dstTokenAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // usdt
+// const rpc = "https://ancient-dry-friday.matic.quiknode.pro/8ff6b30f0829e4bded452e60d0bcf9ac712002db/";
+// const chainId = 137;
+// const srcTokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // usdc polygon
+// const dstTokenAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // usdt
 // const srcTokenAddress = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'; // wmatic polygon
 // const dstTokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // usdc polygon
 const amountIn = "10";
