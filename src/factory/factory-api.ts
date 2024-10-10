@@ -101,7 +101,6 @@ export async function getFactoryPoolsDataFromApi(this: ICurve, factoryType: IFac
     // Filter duplications
     const mainAddresses = Object.values(this.constants.POOLS_DATA).map((pool: IPoolData) => pool.swap_address);
     rawPoolList = rawPoolList.filter((p) => !mainAddresses.includes(p.address));
-    rawPoolList = rawPoolList.filter((p) => p.usdTotal === 0);
 
     setFactorySwapContracts.call(this, rawPoolList, factoryType);
     if (factoryType === "factory-crypto") setCryptoFactoryTokenContracts.call(this, rawPoolList);
