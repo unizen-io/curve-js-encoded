@@ -6,11 +6,14 @@ import {
     Numeric,
     AbstractProvider,
 } from "ethers";
+import { PublicClient } from 'viem'
+import { getPublicClient } from './helpers.js';
 import { Provider as MulticallProvider, Contract as MulticallContract } from "@curvefi/ethcall";
 import { getFactoryPoolData } from "./factory/factory.js";
 import { getFactoryPoolsDataFromApi } from "./factory/factory-api.js";
 import { getCryptoFactoryPoolData } from "./factory/factory-crypto.js";
 import { getTricryptoFactoryPoolData } from "./factory/factory-tricrypto.js";
+import { _getAmplificationCoefficientsFromApi } from "./pools/utils.js";
 import { IPoolData, IDict, ICurve, INetworkName, IChainId, IFactoryPoolType } from "./interfaces";
 import ERC20Abi from './constants/abis/ERC20.json' assert { type: 'json' };
 import cERC20Abi from './constants/abis/cERC20.json' assert { type: 'json' };
@@ -410,6 +413,8 @@ const OLD_CHAINS = [1, 10, 56, 100, 137, 250, 1284, 2222, 8453, 42161, 42220, 43
 
 class Curve implements ICurve {
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider;
+    viemProvider: PublicClient;
+    poolAmplifications: IDict<number>;
     multicallProvider: MulticallProvider;
     signer: ethers.Signer | null;
     signerAddress: string;
@@ -443,6 +448,9 @@ class Curve implements ICurve {
     constructor() {
         // @ts-ignore
         this.provider = null;
+        // @ts-ignore
+        this.viemProvider = null;
+        this.poolAmplifications = {};
         // @ts-ignore
         this.signer = null;
         this.signerAddress = '';
@@ -483,6 +491,8 @@ class Curve implements ICurve {
         // @ts-ignore
         this.provider = null;
         // @ts-ignore
+        this.viemProvider = null;
+        // @ts-ignore
         this.signer = null;
         this.signerAddress = '';
         this.chainId = 1;
@@ -519,6 +529,8 @@ class Curve implements ICurve {
         // JsonRpc provider
         if (providerType.toLowerCase() === 'JsonRpc'.toLowerCase()) {
             providerSettings = providerSettings as { url: string, privateKey: string, batchMaxCount? : number };
+            
+            this.viemProvider = getPublicClient( options.chainId ?? 1, providerSettings.url ?? '')
 
             let jsonRpcApiProviderOptions;
             if ( providerSettings.batchMaxCount ) {
@@ -810,6 +822,10 @@ class Curve implements ICurve {
         this.constants.GAUGES = [ ...this.constants.GAUGES, ...extractGauges(pools) ];
     }
 
+    getAmplificationCoefficientsFromApi = async (): Promise<void> => {
+        this.poolAmplifications = await _getAmplificationCoefficientsFromApi()
+    }
+
     fetchFactoryPools = async (useApi = true): Promise<void> => {
         if ([196, 252, 5000, 1313161554].includes(this.chainId)) return;
 
@@ -819,6 +835,7 @@ class Curve implements ICurve {
             this.constants.FACTORY_POOLS_DATA = lowerCasePoolDataAddresses(await getFactoryPoolData.call(this));
         }
         this.constants.FACTORY_POOLS_DATA = await this._filterHiddenPools(this.constants.FACTORY_POOLS_DATA);
+        
         this._updateDecimalsAndGauges(this.constants.FACTORY_POOLS_DATA);
 
         this.constants.FACTORY_GAUGE_IMPLEMENTATIONS["factory"] = await this.contracts[this.constants.ALIASES.factory].contract.gauge_implementation(this.constantOptions);
