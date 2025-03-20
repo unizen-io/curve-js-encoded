@@ -262,8 +262,8 @@ const _buildRouteGraph = memoize(async (ALL_POOLS_DATA: IDict<IPoolData>): Promi
         const tvl = (await _getTVL(poolId, poolData)) * tvlMultiplier;
 
         // Skip empty pools
-        if (curve.chainId === 1 && tvl < 1000) continue;
-        if (curve.chainId !== 1 && tvl < 100) continue;
+        if (curve.chainId === 1 && tvl < 10000) continue;
+        if (curve.chainId !== 1 && tvl < 1000) continue;
 
         const excludedUnderlyingSwaps = (poolId === 'ib' && curve.chainId === 1) ||
                                         (poolId === 'geist' && curve.chainId === 250) ||
