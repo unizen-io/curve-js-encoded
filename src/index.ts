@@ -71,7 +71,7 @@ import {
     hasDepositAndStake,
     hasRouter,
     getBasePools,
-    getGasPrice,
+    getGasPrice, getCurveLiteNetworks,
 } from "./utils.js";
 import {
     deployStablePlainPool,
@@ -140,8 +140,8 @@ import {
 } from "./dao.js";
 
 async function init (
-    providerType: 'JsonRpc' | 'Web3' | 'Infura' | 'Alchemy',
-    providerSettings: { url?: string, privateKey?: string, batchMaxCount? : number } | { externalProvider: ethers.Eip1193Provider } | { network?: Networkish, apiKey?: string },
+    providerType: 'JsonRpc' | 'Web3' | 'Infura' | 'Alchemy' | 'NoRPC',
+    providerSettings: { url?: string, privateKey?: string, batchMaxCount? : number } | { externalProvider: ethers.Eip1193Provider } | { network?: Networkish, apiKey?: string } | 'NoRPC',
     options: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number, chainId?: number } = {}
 ): Promise<void> {
     await _curve.init(providerType, providerSettings, options);
@@ -149,6 +149,8 @@ async function init (
     this.signerAddress = _curve.signerAddress;
     // @ts-ignore
     this.chainId = _curve.chainId;
+    // @ts-ignore
+    this.isNoRPC = _curve.isNoRPC;
 }
 
 function setCustomFeeData (customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
@@ -184,6 +186,10 @@ const curve = {
     getVolume,
     hasDepositAndStake,
     hasRouter,
+    getCurveLiteNetworks,
+    getNetworkConstants: _curve.getNetworkConstants,
+    getIsLiteChain: _curve.getIsLiteChain,
+    isNoRPC: _curve.isNoRPC,
     factory: {
         fetchPools: _curve.fetchFactoryPools,
         fetchNewPools: _curve.fetchNewFactoryPools,

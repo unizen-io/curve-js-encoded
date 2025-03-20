@@ -1,10 +1,11 @@
 import { ethers, Contract, Typed } from "ethers";
 import { curve } from "../curve.js";
+import { NETWORK_CONSTANTS } from "../constants/network_constants.js";
 import { getPool } from "../pools/index.js";
 import { parseUnits, BN, mulBy1_3, getPoolIdBySwapAddress, DIGas, smartNumber } from '../utils.js';
-import CurveLpTokenV5ABI from "../constants/abis/curve_lp_token_v5.json" assert { type: 'json' };
-import Plain2ETHOracleABIABI from "../constants/abis/factory-v2/Plain2ETHOracle.json" assert { type: 'json' };
-import { tricryptoDeployImplementations } from "../constants/tricryptoDeployImplementations.js";
+import CurveLpTokenV5ABI from "../constants/abis/curve_lp_token_v5.json" with { type: 'json' };
+import Plain2ETHOracleABIABI from "../constants/abis/factory-v2/Plain2ETHOracle.json" with { type: 'json' };
+import rootGaugeFactoryABI from '../constants/abis/gauge_factory/root_gauge_factory.json' with { type: 'json' };
 
 
 // ------- STABLE PLAIN POOLS -------
@@ -746,7 +747,7 @@ const _deployTricryptoPool = async (
         symbol,
         coins,
         curve.constants.ZERO_ADDRESS,
-        tricryptoDeployImplementations[curve.chainId].implementationIdx,
+        curve.constants.CRYPTO_FACTORY_CONSTANTS.tricryptoDeployImplementations?.implementationIdx ?? 0,
         _A,
         _gamma,
         _midFee,
@@ -767,7 +768,7 @@ const _deployTricryptoPool = async (
         symbol,
         coins,
         curve.constants.NATIVE_TOKEN.wrappedAddress,
-        tricryptoDeployImplementations[curve.chainId].implementationIdx,
+        curve.constants.CRYPTO_FACTORY_CONSTANTS.tricryptoDeployImplementations?.implementationIdx ?? 0,
         _A,
         _gamma,
         _midFee,
@@ -871,7 +872,7 @@ const _deployGauge = async (pool: string, factory: string, estimateGas: boolean)
 
 const _deployGaugeSidechain = async (pool: string, salt: string, estimateGas: boolean): Promise<ethers.ContractTransactionResponse | number | number[]> => {
     if (curve.chainId === 1) throw Error("There is no deployGaugeSidechain method on ethereum network");
-    const contract = curve.contracts[curve.constants.ALIASES.gauge_factory].contract;
+    const contract = curve.contracts[curve.constants.ALIASES.child_gauge_factory].contract;
     const _salt = ethers.encodeBytes32String(salt)
     const gas = await contract.deploy_gauge.estimateGas(pool, Typed.bytes32(_salt), curve.signerAddress, curve.constantOptions);
     if (estimateGas) return smartNumber(gas);
@@ -883,7 +884,8 @@ const _deployGaugeSidechain = async (pool: string, salt: string, estimateGas: bo
 
 const _deployGaugeMirror = async (chainId: number, salt: string, estimateGas: boolean): Promise<ethers.ContractTransactionResponse | number | number[]> => {
     if (curve.chainId !== 1) throw Error("There is no deployGaugeMirror method on sidechain network");
-    const contract = chainId === 252 ? curve.contracts[curve.constants.ALIASES.gauge_factory_fraxtal].contract : curve.contracts[curve.constants.ALIASES.gauge_factory].contract;
+    const rootGaugeFactory = chainId !== 42161? NETWORK_CONSTANTS[curve.chainId].ALIASES.root_gauge_factory: NETWORK_CONSTANTS[curve.chainId].ALIASES.root_gauge_factory_arbitrum;
+    const contract = curve.contracts[rootGaugeFactory].contract;
     const _salt = ethers.encodeBytes32String(salt)
     const gas = await contract.deploy_gauge.estimateGas(chainId, Typed.bytes32(_salt), curve.constantOptions);
     if (estimateGas) return smartNumber(gas);
@@ -922,7 +924,8 @@ export const getDeployedGaugeMirrorAddressByTx = async (tx: ethers.ContractTrans
 
 export const getDeployedGaugeMirrorAddress = async (chainId: number): Promise<string> => {
     if (curve.chainId !== 1) throw Error("There is no getDeployedGaugeMirrorAddress method on sidechain network");
-    const contract = curve.contracts[curve.constants.ALIASES.gauge_factory].contract;
+    const rootGaugeFactory = chainId !== 42161? NETWORK_CONSTANTS[curve.chainId].ALIASES.root_gauge_factory: NETWORK_CONSTANTS[curve.chainId].ALIASES.root_gauge_factory_arbitrum;
+    const contract = curve.contracts[rootGaugeFactory].contract;
     const gaugeCount = await contract.get_gauge_count(chainId);
     const currentIndex: number = Number(gaugeCount) - 1;
 

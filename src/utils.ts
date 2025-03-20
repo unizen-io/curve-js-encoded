@@ -1,27 +1,32 @@
-import axios from 'axios';
-import {BrowserProvider, Contract, JsonRpcProvider, Signer} from 'ethers';
-import { Contract as MulticallContract } from "@curvefi/ethcall";
+import {Contract} from 'ethers';
+import {Contract as MulticallContract} from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import {
+    Abi,
+    AbiFunction,
     IBasePoolShortItem,
     IChainId,
+    ICurveLiteNetwork,
     IDict,
     INetworkName,
     IRewardFromApi,
     IVolumeAndAPYs,
     REFERENCE_ASSET,
 } from './interfaces';
-import { curve, NETWORK_CONSTANTS } from "./curve.js";
+import {curve} from "./curve.js";
 import {
     _getAllPoolsFromApi,
+    _getCurveLiteNetworks,
     _getFactoryAPYs,
+    _getLiteNetworksData,
     _getSubgraphData,
     _getVolumes,
 } from "./external-api.js";
-import ERC20Abi from './constants/abis/ERC20.json' assert { type: 'json' };
-import { L2Networks } from './constants/L2Networks.js';
-import { volumeNetworks } from "./constants/volumeNetworks.js";
-import { getPool } from "./pools/index.js";
+import ERC20Abi from './constants/abis/ERC20.json' with { type: 'json' };
+import {L2Networks} from './constants/L2Networks.js';
+import {volumeNetworks} from "./constants/volumeNetworks.js";
+import {getPool} from "./pools/index.js";
+import {NETWORK_CONSTANTS} from "./constants/network_constants.js";
 
 export const ETH_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 // export const MAX_ALLOWANCE = curve.parseUnits(new BigNumber(2).pow(256).minus(1).toFixed(), 0);
@@ -31,7 +36,7 @@ export const MAX_ALLOWANCE = BigInt("1157920892373161954235709850086879078532699
 // Formatting numbers
 
 export const _cutZeros = (strn: string): string => {
-    return strn.replace(/0+$/gi, '').replace(/\.$/gi, '');
+    return strn.replace(/(\.\d*[1-9])0+$/gi, '$1').replace(/\.0+$/gi, '');
 }
 
 export const checkNumber = (n: number | string): number | string => {
@@ -305,21 +310,14 @@ export const ensureAllowance = async (coins: string[], amounts: (number | string
 
 export const getPoolIdBySwapAddress = (swapAddress: string): string => {
     const poolsData = curve.getPoolsData();
-    const poolIds = Object.entries(poolsData).filter(([_, poolData]) => poolData.swap_address.toLowerCase() === swapAddress.toLowerCase());
+    const poolIds = Object.entries(poolsData).filter(([, poolData]) => poolData.swap_address.toLowerCase() === swapAddress.toLowerCase());
     if (poolIds.length === 0) return "";
     return poolIds[0][0];
 }
 
-const _getTokenAddressBySwapAddress = (swapAddress: string): string => {
-    const poolsData = curve.getPoolsData()
-    const res = Object.entries(poolsData).filter(([_, poolData]) => poolData.swap_address.toLowerCase() === swapAddress.toLowerCase());
-    if (res.length === 0) return "";
-    return res[0][1].token_address;
-}
-
 export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
     const network = curve.constants.NETWORK_NAME;
-    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
+    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network, curve.isLiteChain);
     const priceDict: IDict<Record<string, number>[]> = {};
     const priceDictByMaxTvl: IDict<number> = {};
 
@@ -377,19 +375,12 @@ export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
     }
 
     for(const address in priceDict) {
-        if(priceDict[address].length > 0) {
-            const maxTvlItem = priceDict[address].reduce((prev, current) => {
-                if (+current.tvl > +prev.tvl) {
-                    return current;
-                } else {
-                    return prev;
-                }
-            });
+        if (priceDict[address].length) {
+            const maxTvlItem = priceDict[address].reduce((prev, current) => +current.tvl > +prev.tvl ? current : prev);
             priceDictByMaxTvl[address] = maxTvlItem.price
         } else {
             priceDictByMaxTvl[address] = 0
         }
-
     }
 
     return priceDictByMaxTvl
@@ -397,7 +388,7 @@ export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
 
 export const _getCrvApyFromApi = async (): Promise<IDict<[number, number]>> => {
     const network = curve.constants.NETWORK_NAME;
-    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
+    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network, curve.isLiteChain);
     const apyDict: IDict<[number, number]> = {};
 
     for (const extendedPoolData of allTypesExtendedPoolData) {
@@ -417,13 +408,13 @@ export const _getCrvApyFromApi = async (): Promise<IDict<[number, number]>> => {
 
 export const _getRewardsFromApi = async (): Promise<IDict<IRewardFromApi[]>> => {
     const network = curve.constants.NETWORK_NAME;
-    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
+    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network, curve.isLiteChain);
     const rewardsDict: IDict<IRewardFromApi[]> = {};
 
     for (const extendedPoolData of allTypesExtendedPoolData) {
         for (const pool of extendedPoolData.poolData) {
             if (pool.gaugeAddress) {
-                rewardsDict[pool.gaugeAddress.toLowerCase()] = (pool.gaugeRewards ?? [])
+                rewardsDict[pool.gaugeAddress.toLowerCase()] = (pool.gaugeRewards ?? pool.gaugeExtraRewards ?? [])
                     .filter((r) => curve.chainId === 1 || r.tokenAddress.toLowerCase() !== curve.constants.COINS.crv);
             }
         }
@@ -441,7 +432,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
 
     if (assetId === 'USD' || (curve.chainId === 137 && (assetId.toLowerCase() === curve.constants.COINS.am3crv.toLowerCase()))) return 1
 
-    let chainName = {
+    let chainName = curve.isLiteChain? await curve.constants.NETWORK_NAME : {
         1: 'ethereum',
         10: 'optimistic-ethereum',
         56: "binance-smart-chain",
@@ -461,7 +452,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         1313161554: 'aurora',
     }[curve.chainId];
 
-    const nativeTokenName = {
+    const nativeTokenName = curve.isLiteChain ? curve.constants?.API_CONSTANTS?.nativeTokenName:{
         1: 'ethereum',
         10: 'ethereum',
         56: 'binancecoin',
@@ -485,6 +476,14 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         throw Error('curve object is not initialized')
     }
 
+    if (nativeTokenName === undefined) {
+        if(curve.isLiteChain && curve.constants.API_CONSTANTS?.wrappedNativeTokenAddress.toLowerCase() && curve.constants.API_CONSTANTS?.wrappedNativeTokenAddress.toLowerCase() in pricesFromApi) {
+            return pricesFromApi[curve.constants.API_CONSTANTS?.wrappedNativeTokenAddress.toLowerCase()];
+        } else {
+            throw Error('nativeTokenName not found')
+        }
+    }
+
     assetId = {
         'CRV': 'curve-dao-token',
         'EUR': 'stasis-eurs',
@@ -492,6 +491,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         'ETH': 'ethereum',
         'LINK': 'link',
     }[assetId.toUpperCase()] || assetId
+
     assetId = isEth(assetId) ? nativeTokenName : assetId.toLowerCase();
 
     // No EURT on Coingecko Polygon
@@ -505,15 +505,41 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         assetId = 'curve-dao-token';
     }
 
+    if(curve.isLiteChain && assetId.toLowerCase() === curve.constants.API_CONSTANTS?.wrappedNativeTokenAddress.toLowerCase()) {
+        assetId = nativeTokenName
+    }
+
     if ((_usdRatesCache[assetId]?.time || 0) + 600000 < Date.now()) {
         const url = [nativeTokenName, 'ethereum', 'bitcoin', 'link', 'curve-dao-token', 'stasis-eurs'].includes(assetId.toLowerCase()) ?
             `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd` :
-            `https://api.coingecko.com/api/v3/simple/token_price/${chainName}?contract_addresses=${assetId}&vs_currencies=usd`
-        const response = await axios.get(url);
+            `https://api.coingecko.com/api/v3/simple/token_price/${chainName}?contract_addresses=${assetId}&vs_currencies=usd`;
+
         try {
-            _usdRatesCache[assetId] = {'rate': response.data[assetId]['usd'] ?? 0, 'time': Date.now()};
-        } catch (err) { // TODO pay attention!
-            _usdRatesCache[assetId] = {'rate': 0, 'time': Date.now()};
+            const response = await fetch(url);
+            const data = await response.json() ?? {};
+
+            if (response.status === 200 && data[assetId]?.usd !== undefined) {
+                _usdRatesCache[assetId] = {
+                    'rate': data[assetId].usd,
+                    'time': Date.now(),
+                };
+            } else {
+                if (!curve.isLiteChain) {
+                    console.warn(`Non-200 response for ${assetId}:`, response.status, data);
+                }
+                _usdRatesCache[assetId] = {
+                    'rate': 0,
+                    'time': Date.now(),
+                };
+            }
+        } catch (err: any) {
+            if (!curve.isLiteChain) {
+                console.error(`Error fetching USD rate for ${assetId}:`, err.message);
+            }
+            _usdRatesCache[assetId] = {
+                'rate': 0,
+                'time': Date.now(),
+            };
         }
     }
 
@@ -525,7 +551,7 @@ export const getUsdRate = async (coin: string): Promise<number> => {
     return await _getUsdRate(coinAddress);
 }
 
-export const getBaseFeeByLastBlock = async ()  => {
+export const getBaseFeeByLastBlock = async (): Promise<number> => {
     const provider = curve.provider;
 
     try {
@@ -560,6 +586,9 @@ export const getGasPriceFromL2 = async (): Promise<number> => {
     if(curve.chainId === 196) {
         return await getGasPrice() // gwei
     }
+    if(curve.chainId === 324) {
+        return await getGasPrice() // gwei
+    }
     if(curve.chainId === 5000) {
         return await getGasPrice() // gwei
     }
@@ -582,7 +611,13 @@ export const getGasInfoForL2 = async (): Promise<Record<string, number | null>> 
     } else if(curve.chainId === 196) {
         const gasPrice = await getGasPrice()
 
-        return  {
+        return {
+            gasPrice,
+        }
+    } else if(curve.chainId === 324) {
+        const gasPrice = await getGasPrice()
+
+        return {
             gasPrice,
         }
     } else if(curve.chainId === 5000) {
@@ -605,35 +640,37 @@ export const getTxCostsUsd = (ethUsdRate: number, gasPrice: number, gas: number 
     }
 }
 
-const _getNetworkName = (network: INetworkName | IChainId = curve.chainId): INetworkName => {
-    if (typeof network === "number" && NETWORK_CONSTANTS[network]) {
-        return NETWORK_CONSTANTS[network].NAME;
-    } else if (typeof network === "string" && Object.values(NETWORK_CONSTANTS).map((n) => n.NAME).includes(network)) {
-        return network;
+export const getCurveLiteNetworks = async (): Promise<ICurveLiteNetwork[]> => {
+    return await _getCurveLiteNetworks()
+}
+
+export const getNetworkNameByChainId = (chainId: number, networks: ICurveLiteNetwork[]): string => {
+    const network = networks.find((network: ICurveLiteNetwork) => network.chainId === chainId);
+    return network ? network.id : "Unknown Network";
+}
+
+export const getNetworkConstants = async (chainId: IChainId | number): Promise<IDict<any>> => {
+    if (chainId in NETWORK_CONSTANTS) {
+        return { ...NETWORK_CONSTANTS[chainId], IS_LITE_CHAIN: false};
     } else {
-        throw Error(`Wrong network name or id: ${network}`);
+        const NAME = getNetworkNameByChainId(chainId, await _getCurveLiteNetworks());
+        if (NAME === "Unknown Network") throw Error(`Wrong chain id: ${chainId}`);
+        return  {... await _getLiteNetworksData(NAME), NAME, IS_LITE_CHAIN: true };
     }
 }
 
-const _getChainId = (network: INetworkName | IChainId = curve.chainId): IChainId => {
-    if (typeof network === "number" && NETWORK_CONSTANTS[network]) {
-        return network;
-    } else if (typeof network === "string" && Object.values(NETWORK_CONSTANTS).map((n) => n.NAME).includes(network)) {
-        const idx = Object.values(NETWORK_CONSTANTS).map((n) => n.NAME).indexOf(network);
-        return Number(Object.keys(NETWORK_CONSTANTS)[idx]) as IChainId;
-    } else {
-        throw Error(`Wrong network name or id: ${network}`);
-    }
-}
-
-export const getTVL = async (network: INetworkName | IChainId = curve.chainId): Promise<number> => {
-    network = _getNetworkName(network);
-    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
+export const getTVL = async (chainId = curve.chainId): Promise<number> => {
+    const networkConstants = await getNetworkConstants(chainId);
+    const allTypesExtendedPoolData = await _getAllPoolsFromApi(networkConstants.NAME, networkConstants.IS_LITE_CHAIN);
 
     return allTypesExtendedPoolData.reduce((sum, data) => sum + (data.tvl ?? data.tvlAll ?? 0), 0)
 }
 
 export const getVolumeApiController = async (network: INetworkName): Promise<IVolumeAndAPYs> => {
+    if(curve.isLiteChain) {
+        throw Error('This method is not supported for the lite version')
+    }
+
     if(volumeNetworks.getVolumes.includes(curve.chainId)) {
         return  await _getVolumes(network);
     }
@@ -647,14 +684,19 @@ export const getVolumeApiController = async (network: INetworkName): Promise<IVo
     throw Error(`Can't get volume for network: ${network}`);
 }
 
-export const getVolume = async (network: INetworkName | IChainId = curve.chainId): Promise<{ totalVolume: number, cryptoVolume: number, cryptoShare: number }> => {
-    network = _getNetworkName(network);
-    const { totalVolume, cryptoVolume, cryptoShare } = await getVolumeApiController(network);
+export const getVolume = async (chainId = curve.chainId): Promise<{ totalVolume: number, cryptoVolume: number, cryptoShare: number }> => {
+    if(curve.isLiteChain) {
+        throw Error('This method is not supported for the lite version')
+    }
+
+    const networkConstants = await getNetworkConstants(chainId);
+    const { totalVolume, cryptoVolume, cryptoShare } = await getVolumeApiController(networkConstants.NAME);
     return { totalVolume, cryptoVolume, cryptoShare }
 }
 
 export const _setContracts = (address: string, abi: any): void => {
     curve.contracts[address] = {
+        abi,
         contract: new Contract(address, abi, curve.signer || curve.provider),
         multicallContract: new MulticallContract(address, abi),
     }
@@ -715,7 +757,7 @@ export const getCoinsData = async (...coins: string[] | string[][]): Promise<{na
     }
 
     const res: {name: string, symbol: string, decimals: number}[]  = [];
-    coins.forEach((address: string, i: number) => {
+    coins.forEach(() => {
         res.push({
             name: _response.shift() as string,
             symbol: _response.shift() as string,
@@ -727,26 +769,16 @@ export const getCoinsData = async (...coins: string[] | string[][]): Promise<{na
 }
 
 
-export const hasDepositAndStake = (): boolean => curve.constants.ALIASES.deposit_and_stake !== curve.constants.ZERO_ADDRESS;
-export const hasRouter = (): boolean => curve.constants.ALIASES.router !== curve.constants.ZERO_ADDRESS;
+export const hasDepositAndStake = (): boolean => "deposit_and_stake" in curve.constants.ALIASES;
+export const hasRouter = (): boolean => "router" in curve.constants.ALIASES;
 
-export const getCountArgsOfMethodByContract = (contract: Contract, methodName: string): number => {
-    const func = contract.interface.fragments.find((item: any) => item.name === methodName);
-    if(func) {
-        return func.inputs.length;
-    } else {
-        return -1;
-    }
-}
+export const findAbiFunction = (abi: Abi, methodName: string) =>
+    abi.filter((item) => item.type == 'function' && item.name === methodName) as AbiFunction[]
 
-export const isMethodExist = (contract: Contract, methodName: string): boolean => {
-    const func = contract.interface.fragments.find((item: any) => item.name === methodName);
-    if(func) {
-        return true;
-    } else {
-        return false;
-    }
-}
+export const getCountArgsOfMethodByAbi = (abi: Abi, methodName: string): number => findAbiFunction(abi, methodName)[0]?.inputs.length ?? -1
+
+export const findAbiSignature = (abi: Abi, methodName: string, signature: string) =>
+    findAbiFunction(abi, methodName).find((func) => func.inputs.map((i) => `${i.type}`).join(',') == signature)
 
 export const getPoolName = (name: string): string => {
     const separatedName = name.split(": ")
@@ -757,9 +789,7 @@ export const getPoolName = (name: string): string => {
     }
 }
 
-export const isStableNgPool = (name: string): boolean => {
-    return name.includes('factory-stable-ng')
-}
+export const isStableNgPool = (name: string): boolean => name.includes('factory-stable-ng')
 
 export const assetTypeNameHandler = (assetTypeName: string): REFERENCE_ASSET => {
     if (assetTypeName.toUpperCase() === 'UNKNOWN') {
@@ -798,30 +828,45 @@ export const getBasePools = async (): Promise<IBasePoolShortItem[]> => {
     })
 }
 
-export const memoizedContract = (): (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer) => Contract => {
-    const cache: Record<string, Contract> = {};
-    return (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer): Contract => {
-        if (address in cache) {
-            return cache[address];
-        }
-        else {
-            const result = new Contract(address, abi, provider)
-            cache[address] = result;
-            return result;
-        }
+export function log(fnName: string, ...args: unknown[]): void {
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`curve-js@${new Date().toISOString()} -> ${fnName}:`, ...args)
     }
 }
 
-export const memoizedMulticallContract = (): (address: string, abi: any) => MulticallContract => {
-    const cache: Record<string, MulticallContract> = {};
-    return (address: string, abi: any): MulticallContract => {
-        if (address in cache) {
-            return cache[address];
-        }
-        else {
-            const result = new MulticallContract(address, abi)
-            cache[address] = result;
-            return result;
-        }
+export function runWorker<In extends { type: string }, Out>(code: string, syncFn: () => ((val: In) => Out) | undefined, inputData: In, timeout = 30000): Promise<Out> {
+    if (typeof Worker === 'undefined') {
+        // in nodejs run worker in main thread
+        return Promise.resolve(syncFn()!(inputData));
     }
+
+    const blob = new Blob([code], { type: 'application/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    const worker = new Worker(blobUrl, {type: 'module'});
+    return new Promise<Out>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timeout')), timeout);
+        worker.onerror = (e) => {
+            clearTimeout(timer);
+            console.error(code, inputData, e);
+            reject(e);
+        };
+        worker.onmessage = (e) => {
+            const {type, result} = e.data;
+            if (type === inputData.type) {
+                clearTimeout(timer);
+                resolve(result);
+                // console.log(code, inputData, result, start - Date.now());
+            }
+        };
+        worker.postMessage(inputData);
+    }).finally(() => {
+        worker.terminate();
+    });
 }
+
+export const PERIODS = {
+    DAY: 86400,
+    WEEK: 604800,      // 7 * 86400
+    MONTH: 2592000,    // 30 * 86400
+    YEAR: 31536000,    // 365 * 86400
+};

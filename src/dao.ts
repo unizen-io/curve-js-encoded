@@ -19,7 +19,7 @@ import {
     IDict,
     TVoteType,
 } from './interfaces';
-import feeDistributorViewABI from "./constants/abis/fee_distributor_view.json" assert { type: 'json' };
+import feeDistributorViewABI from "./constants/abis/fee_distributor_view.json" with { type: 'json' };
 
 
 // ----------------- Refactored boosting stuff -----------------
@@ -226,11 +226,11 @@ export const getVotingGaugeList = async (): Promise<IVotingGauge[]> => {
     for (let i = 0; i < gaugeData.length; i++) {
         if ((gaugeData[i].is_killed || gaugeData[i].hasNoCrv) && Number(gaugeData[i].gauge_controller.gauge_relative_weight) === 0) continue;
         res.push({
-            poolUrl: gaugeData[i].poolUrls.swap[0],
-            network: _extractNetworkFromPoolUrl(gaugeData[i].poolUrls.swap[0]),
+            poolUrl: gaugeData[i].poolUrls?.swap[0] || '',
+            network: gaugeData[i].blockchainId,
             gaugeAddress: gaugeData[i].gauge,
-            poolAddress: gaugeData[i].swap,
-            lpTokenAddress: gaugeData[i].swap_token,
+            poolAddress: gaugeData[i].swap || '',
+            lpTokenAddress: gaugeData[i].swap_token || '',
             poolName: gaugeData[i].shortName,
             totalVeCrv: curve.formatUnits(gaugeData[i].gauge_controller.get_gauge_weight, 18),
             relativeWeight: curve.formatUnits(gaugeData[i].gauge_controller.gauge_relative_weight, 16),
@@ -250,7 +250,8 @@ export const userGaugeVotes = async (address = ""): Promise<{ gauges: IGaugeUser
     const gaugeData = Object.values(await _getAllGauges());
     const calls: any[] = [veMulticallContract.balanceOf(address)];
     for (const d of gaugeData) {
-        calls.push(gcMulticallContract.vote_user_slopes(address, d.gauge));
+        const gaugeAddress = d.rootGauge ? d.rootGauge : d.gauge;
+        calls.push(gcMulticallContract.vote_user_slopes(address, gaugeAddress));
     }
     const [veCrvBalance, ...votes] = await curve.multicallProvider.all(calls) as [bigint, bigint[]];
 
@@ -267,11 +268,11 @@ export const userGaugeVotes = async (address = ""): Promise<{ gauges: IGaugeUser
             userFutureVeCrv: curve.formatUnits(veCrvBalance * votes[i][1] / BigInt(10000), 18),
             expired: dt === BigInt(0),
             gaugeData: {
-                poolUrl: gaugeData[i].poolUrls.swap[0],
-                network: _extractNetworkFromPoolUrl(gaugeData[i].poolUrls.swap[0]),
+                poolUrl: gaugeData[i].poolUrls?.swap[0] || '',
+                network: gaugeData[i].blockchainId,
                 gaugeAddress: gaugeData[i].gauge,
-                poolAddress: gaugeData[i].swap,
-                lpTokenAddress: gaugeData[i].swap_token,
+                poolAddress: gaugeData[i].swap || '',
+                lpTokenAddress: gaugeData[i].swap_token || '',
                 poolName: gaugeData[i].shortName,
                 totalVeCrv: curve.formatUnits(gaugeData[i].gauge_controller.get_gauge_weight, 18),
                 relativeWeight: curve.formatUnits(gaugeData[i].gauge_controller.gauge_relative_weight, 16),
@@ -341,7 +342,7 @@ export const userProposalVotes = async (address = ""): Promise<IDaoProposalUserL
     const proposalList = await _getDaoProposalList();
     const calls = [];
     for (const proposal of proposalList) {
-        if (proposal.voteType == "PARAMETER") {
+        if (proposal.voteType.toUpperCase() == "PARAMETER") {
             calls.push(curve.contracts[curve.constants.ALIASES.voting_parameter].multicallContract.getVoterState(proposal.voteId, address));
         } else {
             calls.push(curve.contracts[curve.constants.ALIASES.voting_ownership].multicallContract.getVoterState(proposal.voteId, address));
@@ -364,7 +365,7 @@ export const userProposalVotes = async (address = ""): Promise<IDaoProposalUserL
 
 const _voteForProposal = async (type: TVoteType, id: number, support: boolean, estimateGas: boolean): Promise<string | number | number[]> => {
     if (curve.chainId !== 1) throw Error("Ethereum-only method")
-    const contractAddress = type === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
+    const contractAddress = type.toUpperCase() === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
     const contract = curve.contracts[contractAddress].contract;
     const yesPct = support ? BigInt(10**18) : BigInt(0);
     const noPct = BigInt(10**18) - yesPct;
@@ -386,7 +387,7 @@ export const voteForProposal = async (type: TVoteType, id: number, support: bool
 
 const _executeVote = async (type: TVoteType, id: number, estimateGas = false): Promise<string | number | number[]> => {
     if (curve.chainId !== 1) throw Error("Ethereum-only method")
-    const contractAddress = type === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
+    const contractAddress = type.toUpperCase() === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
     const contract = curve.contracts[contractAddress].contract;
     const gas = await contract.executeVote.estimateGas(id, curve.constantOptions);
     if (estimateGas) return smartNumber(gas);
@@ -406,7 +407,7 @@ export const executeVote = async (type:TVoteType, id: number): Promise<string> =
 
 export const isCanVoteExecute = async (type: TVoteType, id: number): Promise<boolean> => {
     if (curve.chainId !== 1) throw Error("Ethereum-only method")
-    const contractAddress = type === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
+    const contractAddress = type.toUpperCase() === "PARAMETER" ? curve.constants.ALIASES.voting_parameter : curve.constants.ALIASES.voting_ownership;
     const contract = curve.contracts[contractAddress].contract;
 
     return await contract.canExecute(id, { ...curve.options });

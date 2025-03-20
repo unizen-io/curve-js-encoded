@@ -5,8 +5,8 @@ export interface IDict<T> {
     [index: string]: T,
 }
 
-export type INetworkName = "ethereum" | "optimism" | "bsc" | "xdai" | "polygon" | "x-layer" | "fantom" | "fraxtal" | "zksync" | "moonbeam" | "kava" | "mantle" | "base" | "arbitrum" | "celo" | "avalanche" | "aurora";
-export type IChainId = 1 | 10 | 56 | 100 | 137 | 196 | 250 | 252 | 324 | 1284 | 2222 | 5000 | 8453 | 42161 | 42220 | 43114 | 1313161554;
+export type INetworkName = string;
+export type IChainId = number;
 export type IFactoryPoolType = "factory" | "factory-crvusd" | "factory-eywa" | "factory-crypto" | "factory-twocrypto" | "factory-tricrypto" | "factory-stable-ng";
 export type IPoolType = "main" | "crypto" | IFactoryPoolType;
 export type ISwapType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
@@ -51,32 +51,46 @@ export interface IPoolData {
     gauge_status?: Record<string, boolean> | null,
 }
 
+export interface INetworkConstants {
+    NATIVE_TOKEN: { symbol: string, wrappedSymbol: string, address: string, wrappedAddress: string },
+    NETWORK_NAME: INetworkName,
+    ALIASES: IDict<string>,
+    POOLS_DATA: IDict<IPoolData>,
+    STABLE_FACTORY_CONSTANTS: { implementationABIDict?: IDict<any>, basePoolIdZapDict?: IDict<{ address: string, ABI: any }>, stableNgBasePoolZap?: string }
+    CRYPTO_FACTORY_CONSTANTS: { lpTokenBasePoolIdDict?: IDict<string>, basePoolIdZapDict?: IDict<{ address: string, ABI: any }>, tricryptoDeployImplementations?: IDict<string | number> }
+    FACTORY_POOLS_DATA: IDict<IPoolData>,
+    STABLE_NG_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    CRVUSD_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    CRYPTO_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    TWOCRYPTO_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    TRICRYPTO_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    EYWA_FACTORY_POOLS_DATA: IDict<IPoolData>,
+    BASE_POOLS: IDict<number>,
+    LLAMMAS_DATA: IDict<IPoolData>,
+    COINS: IDict<string>,
+    DECIMALS: IDict<number>,
+    GAUGES: string[],
+    FACTORY_GAUGE_IMPLEMENTATIONS: any,
+    ZERO_ADDRESS: string,
+    API_CONSTANTS?: {
+        nativeTokenName: string
+        wrappedNativeTokenAddress: string
+    }
+}
+
 export interface ICurve {
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider,
     multicallProvider: MulticallProvider,
     signer: ethers.Signer | null,
     signerAddress: string,
     chainId: number,
+    isLiteChain: boolean,
     contracts: { [index: string]: { contract: Contract, multicallContract: MulticallContract } },
     feeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number },
     constantOptions: { gasLimit?: number },
     options: { gasPrice?: number | bigint, maxFeePerGas?: number | bigint, maxPriorityFeePerGas?: number | bigint },
-    constants: {
-        NATIVE_TOKEN: { symbol: string, wrappedSymbol: string, address: string, wrappedAddress: string },
-        NETWORK_NAME: INetworkName,
-        ALIASES: IDict<string>,
-        POOLS_DATA: IDict<IPoolData>,
-        FACTORY_POOLS_DATA: IDict<IPoolData>,
-        CRVUSD_FACTORY_POOLS_DATA: IDict<IPoolData>,
-        CRYPTO_FACTORY_POOLS_DATA: IDict<IPoolData>,
-        TRICRYPTO_FACTORY_POOLS_DATA: IDict<IPoolData>,
-        BASE_POOLS: IDict<number>,
-        LLAMMAS_DATA: IDict<IPoolData>,
-        COINS: IDict<string>,
-        DECIMALS: IDict<number>,
-        GAUGES: string[],
-    };
-    setContract: (address: string, abi: any) => void,
+    constants: INetworkConstants,
+    setContract: (address: string | undefined, abi: any) => void,
 }
 
 export interface ICoinFromPoolDataApi {
@@ -117,6 +131,7 @@ export interface IPoolDataFromApi {
     implementationAddress: string,
     coins: ICoinFromPoolDataApi[],
     gaugeRewards: IRewardFromApi[],
+    gaugeExtraRewards?: IRewardFromApi[],
     usdTotal: number,
     totalSupply: number,
     amplificationCoefficient: string,
@@ -128,12 +143,7 @@ export interface IPoolDataShort {
     address: string,
 }
 
-export interface ISubgraphPoolData {
-    address: string,
-    volumeUSD: number,
-    latestDailyApy: number,
-    latestWeeklyApy: number,
-}
+export type IRoutePoolData = Pick<IPoolData, 'is_lending' | 'wrapped_coin_addresses' | 'underlying_coin_addresses' | 'token_address'>;
 
 export interface IExtendedPoolDataFromApi {
     poolData: IPoolDataFromApi[],
@@ -181,7 +191,9 @@ export interface IProfit {
 }
 
 export interface IGaugesDataFromApi {
+    blockchainId: string;
     gauge: string,
+    rootGauge?: string,
     swap: string,
     swap_token: string,
     shortName: string,
@@ -189,7 +201,7 @@ export interface IGaugesDataFromApi {
         gauge_relative_weight: string,
         get_gauge_weight: string,
     },
-    poolUrls: {
+    poolUrls?: {
         swap: string[],
     }
     is_killed?: boolean,
@@ -276,4 +288,34 @@ export interface IBasePoolShortItem {
     token: string,
 }
 
+export interface ICurveLiteNetwork {
+    id: string
+    chainId: number
+    name: string
+    rpcUrl: string
+    explorerUrl: string
+    nativeCurrencySymbol: string
+    isTestnet: boolean
+}
+
 export type TVoteType = "PARAMETER" | "OWNERSHIP"
+
+export type AbiParameter = { type: string, name?:string, components?: readonly AbiParameter[] }
+type CtorMutability = 'payable' | 'nonpayable';
+export type AbiStateMutability = 'pure' | 'view' | CtorMutability
+export type AbiFunction = {
+    type: 'function'
+    constant?: boolean
+    gas?: number
+    inputs: readonly AbiParameter[]
+    name: string
+    outputs: readonly AbiParameter[]
+    payable?: boolean | undefined
+    stateMutability: AbiStateMutability
+}
+export type AbiConstructor = { type: 'constructor', inputs: readonly AbiParameter[], payable?: boolean, stateMutability: CtorMutability }
+export type AbiFallback = { type: 'fallback', payable?: boolean, stateMutability: CtorMutability }
+export type AbiReceive = {type: 'receive', stateMutability: Extract<AbiStateMutability, 'payable'>}
+export type AbiEvent = {type: 'event', anonymous?: boolean, inputs: readonly AbiParameter[], name: string}
+export type AbiError = {type: 'error', inputs: readonly AbiParameter[], name: string}
+export type Abi = (AbiConstructor | AbiError | AbiEvent | AbiFallback | AbiFunction | AbiReceive)[]
