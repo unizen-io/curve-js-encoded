@@ -367,6 +367,6 @@ export const _getAmplificationCoefficientsFromApi = async (): Promise<IDict<numb
             amplificationCoefficientDict[pool.address.toLowerCase()] = Number(pool.amplificationCoefficient);
         }
     }
-
+    
     return amplificationCoefficientDict
 }
