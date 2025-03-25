@@ -651,8 +651,7 @@ const _getBestRoute = memoize(
         );
 
         const expectedAmountsUsd = expectedAmounts.map((a) => a * outputCoinUsdRate);
-
-        const L1GasPrice = L2Networks.includes(curve.chainId) ? await getGasPriceFromL1() : 0;
+        const L1GasPrice = !L2Networks.includes(curve.chainId) ? await getGasPriceFromL1() : 0;
 
         const txCostsUsd = gasAmounts.map((a) => getTxCostsUsd(ethUsdRate, gasPrice, a, L1GasPrice));
 
@@ -701,6 +700,7 @@ const _getBestRouteAndOutput = (inputCoin: string, outputCoin: string, amount: n
 export const getBestRouteAndOutput = async (inputCoin: string, outputCoin: string, amount: number | string): Promise<{ route: IRoute, output: string }> => {
     const [inputCoinAddress, outputCoinAddress] = _getCoinAddresses(inputCoin, outputCoin);
     const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
+    console.log('_getBestRoute params', inputCoinAddress, outputCoinAddress, amount);
     const bestRoute = await _getBestRoute(inputCoinAddress, outputCoinAddress, amount); // 5 minutes cache
     if (!bestRoute) return { route: [], output: '0.0' };
 
