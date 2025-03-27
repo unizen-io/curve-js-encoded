@@ -700,7 +700,6 @@ const _getBestRouteAndOutput = (inputCoin: string, outputCoin: string, amount: n
 export const getBestRouteAndOutput = async (inputCoin: string, outputCoin: string, amount: number | string): Promise<{ route: IRoute, output: string }> => {
     const [inputCoinAddress, outputCoinAddress] = _getCoinAddresses(inputCoin, outputCoin);
     const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
-    console.log('_getBestRoute params', inputCoinAddress, outputCoinAddress, amount);
     const bestRoute = await _getBestRoute(inputCoinAddress, outputCoinAddress, amount); // 5 minutes cache
     if (!bestRoute) return { route: [], output: '0.0' };
 
