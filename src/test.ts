@@ -13,10 +13,10 @@ import { ICalldata } from "./interfaces";
 // const srcTokenAddress = "0xca5ca9083702c56b481d1eec86f1776fdbd2e594"; // rsr polygon
 // const dstTokenAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"; // weth polygon
 // const dstTokenAddress = "0xaf88d065e77c8cc2239327c5edb3a432268e5831"; // usdc polygon
-const rpc = "https://ancient-dry-friday.matic.quiknode.pro/8ff6b30f0829e4bded452e60d0bcf9ac712002db/";
-const chainId = 137;
-const srcTokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // usdc polygon
-const dstTokenAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // usdt
+const rpc = 'https://base.drpc.org';
+const chainId = 8453;
+const srcTokenAddress = '0x4200000000000000000000000000000000000006'; // usdc polygon
+const dstTokenAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // usdt
 // const srcTokenAddress = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'; // wmatic polygon
 // const dstTokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // usdc polygon
 const amountIn = "10";
@@ -46,6 +46,7 @@ export const main = async () => {
     await curve.getAmplificationCoefficientsFromApi();
     console.log("factory pool list", curve.factory.getPoolList().length);
     const start = new Date().getTime();
+    console.log(srcTokenAddress, dstTokenAddress, amountIn);
     const bestRouteAndOutput = await curve.router.getBestRouteAndOutput(srcTokenAddress, dstTokenAddress, amountIn);
     const end = new Date().getTime();
     console.log("fetch time", start - start0, "ms");

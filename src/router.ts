@@ -651,8 +651,7 @@ const _getBestRoute = memoize(
         );
 
         const expectedAmountsUsd = expectedAmounts.map((a) => a * outputCoinUsdRate);
-
-        const L1GasPrice = L2Networks.includes(curve.chainId) ? await getGasPriceFromL1() : 0;
+        const L1GasPrice = 0; // L2Networks.includes(curve.chainId) ? await getGasPriceFromL1() : 0;
 
         const txCostsUsd = gasAmounts.map((a) => getTxCostsUsd(ethUsdRate, gasPrice, a, L1GasPrice));
 
