@@ -16,7 +16,8 @@ import { POOLS_DATA_BSC } from "./bsc.js";
 import { POOLS_DATA_FRAXTAL } from "./fraxtal.js";
 import { POOLS_DATA_XLAYER } from "./xlayer.js";
 import { POOLS_DATA_MANTLE } from "./mantle.js";
-
+import { POOLS_DATA_SONIC } from "./sonic.js";
+import { POOLS_DATA_HYPERLIQUID } from "./hyperliquid.js";
 export {
     POOLS_DATA_ETHEREUM,
     LLAMMAS_DATA_ETHEREUM,
@@ -36,4 +37,6 @@ export {
     POOLS_DATA_FRAXTAL,
     POOLS_DATA_XLAYER,
     POOLS_DATA_MANTLE,
+    POOLS_DATA_SONIC,
+    POOLS_DATA_HYPERLIQUID,
 };

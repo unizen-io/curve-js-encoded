@@ -1,10 +1,9 @@
-import {ICurve, IPoolDataFromApi, IPoolDataShort} from "../interfaces";
-import { FACTORY_CONSTANTS } from "./constants.js";
-import { CRYPTO_FACTORY_CONSTANTS } from "./constants-crypto.js";
+import { ICurve, IPoolDataShort } from "../interfaces";
 import { getPoolIdBySwapAddress } from "../utils.js";
+import {type Curve} from "../curve.js";
 
 export function setFactoryZapContracts(this: ICurve, isCrypto: boolean): void {
-    const basePoolIdZapDict = (isCrypto ? CRYPTO_FACTORY_CONSTANTS : FACTORY_CONSTANTS)[this.chainId].basePoolIdZapDict;
+    const basePoolIdZapDict = (isCrypto ? this.constants.CRYPTO_FACTORY_CONSTANTS : this.constants.STABLE_FACTORY_CONSTANTS).basePoolIdZapDict ?? {};
     for (const basePoolId in basePoolIdZapDict) {
         if (!Object.prototype.hasOwnProperty.call(basePoolIdZapDict, basePoolId)) continue;
         const basePool = basePoolIdZapDict[basePoolId];
@@ -15,11 +14,11 @@ export function setFactoryZapContracts(this: ICurve, isCrypto: boolean): void {
     }
 }
 
-export function getPoolIdByAddress(poolList: IPoolDataShort[] , address: string): string {
+export function getPoolIdByAddress(this: Curve, poolList: IPoolDataShort[] , address: string): string {
     const pool = poolList.find((item) => item.address.toLowerCase() === address.toLowerCase())
     if(pool) {
         return pool.id;
     } else {
-        return getPoolIdBySwapAddress(address.toLowerCase())
+        return getPoolIdBySwapAddress.call(this, address.toLowerCase())
     }
 }
